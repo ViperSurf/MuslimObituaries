@@ -1,0 +1,128 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Al-Baqaa API",
+    "version": "1.0.0",
+    "description": "Public API for the Al-Baqaa Muslim obituary & memorial platform. The static web client ships with a LocalStorage-backed service layer (src/services/api.ts) that implements this contract; a hosted backend can replace it without changing the UI."
+  },
+  "servers": [{ "url": "/api/v1" }],
+  "paths": {
+    "/obituaries": {
+      "get": {
+        "summary": "List obituaries",
+        "parameters": [
+          { "name": "q", "in": "query", "schema": { "type": "string" }, "description": "Name search" },
+          { "name": "city", "in": "query", "schema": { "type": "string" } },
+          { "name": "sect", "in": "query", "schema": { "type": "string", "enum": ["Sunni", "Shia", "Non-denominational"] } },
+          { "name": "janazah", "in": "query", "schema": { "type": "string", "enum": ["upcoming", "past", "any"] } }
+        ],
+        "responses": { "200": { "description": "Array of obituaries", "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/Obituary" } } } } } }
+      },
+      "post": {
+        "summary": "Submit a new obituary (free)",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ObituaryInput" } } } },
+        "responses": { "201": { "description": "Created obituary", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Obituary" } } } } }
+      }
+    },
+    "/obituaries/{id}": {
+      "get": {
+        "summary": "Get one obituary",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "Obituary", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Obituary" } } } }, "404": { "description": "Not found" } }
+      }
+    },
+    "/obituaries/{id}/condolences": {
+      "get": {
+        "summary": "List Memory Wall condolences for an obituary",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "Array of condolences", "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/Condolence" } } } } } }
+      },
+      "post": {
+        "summary": "Post a condolence to the Memory Wall",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["author", "message"], "properties": { "author": { "type": "string" }, "message": { "type": "string" } } } } } },
+        "responses": { "201": { "description": "Created condolence", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Condolence" } } } } }
+      }
+    },
+    "/obituaries/{id}/dua": {
+      "post": {
+        "summary": "Increment the 'Offer Rahmah / Say Dua' counter",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "Updated dua count", "content": { "application/json": { "schema": { "type": "object", "properties": { "duaCount": { "type": "integer" } } } } } } }
+      }
+    },
+    "/janazah-alerts/subscribe": {
+      "post": {
+        "summary": "Subscribe to location-based Janazah alerts",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["email", "city"], "properties": { "email": { "type": "string", "format": "email" }, "phone": { "type": "string" }, "city": { "type": "string" }, "radiusMiles": { "type": "integer", "default": 25 } } } } } },
+        "responses": { "201": { "description": "Subscription recorded" } }
+      }
+    },
+    "/vendors": {
+      "get": {
+        "summary": "List verified funeral-service vendors",
+        "parameters": [{ "name": "category", "in": "query", "schema": { "type": "string", "enum": ["Funeral Home", "Mosque / Ghusl", "Cemetery", "Legal / Wasiyyah"] } }],
+        "responses": { "200": { "description": "Array of vendors", "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/Vendor" } } } } } }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Obituary": {
+        "type": "object",
+        "required": ["id", "name", "city", "state", "dateOfDeath", "family"],
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "arabicName": { "type": "string" },
+          "age": { "type": "integer" },
+          "city": { "type": "string" },
+          "state": { "type": "string" },
+          "biography": { "type": "string" },
+          "sect": { "type": "string", "enum": ["Sunni", "Shia", "Non-denominational"] },
+          "dateOfDeath": { "type": "string", "format": "date" },
+          "janazah": { "$ref": "#/components/schemas/Janazah" },
+          "burial": { "type": "object", "properties": { "cemetery": { "type": "string" }, "address": { "type": "string" } } },
+          "family": { "type": "string" },
+          "charity": { "type": "object", "properties": { "name": { "type": "string" }, "goal": { "type": "number" }, "raised": { "type": "number" }, "url": { "type": "string" } } },
+          "duaCount": { "type": "integer" },
+          "createdAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "ObituaryInput": { "type": "object", "description": "Obituary without server-managed fields (id, duaCount, createdAt)" },
+      "Janazah": {
+        "type": "object",
+        "properties": {
+          "mosque": { "type": "string" },
+          "address": { "type": "string" },
+          "datetime": { "type": "string", "format": "date-time" },
+          "afterPrayer": { "type": "string", "description": "e.g. 'After Dhuhr'" },
+          "notes": { "type": "string" }
+        }
+      },
+      "Condolence": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "obituaryId": { "type": "string" },
+          "author": { "type": "string" },
+          "message": { "type": "string" },
+          "createdAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "Vendor": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "category": { "type": "string", "enum": ["Funeral Home", "Mosque / Ghusl", "Cemetery", "Legal / Wasiyyah"] },
+          "city": { "type": "string" },
+          "state": { "type": "string" },
+          "phone": { "type": "string" },
+          "address": { "type": "string" },
+          "notes": { "type": "string" }
+        }
+      }
+    }
+  }
+}
