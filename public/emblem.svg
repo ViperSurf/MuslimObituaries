@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="tile" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0a6b4f"/>
+      <stop offset="1" stop-color="#04241b"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#e9c766"/>
+      <stop offset="1" stop-color="#c9962e"/>
+    </linearGradient>
+  </defs>
+  <rect x="1" y="1" width="62" height="62" rx="14" fill="url(#tile)"/>
+  <rect x="4" y="4" width="56" height="56" rx="11" fill="none" stroke="#d4af37" stroke-opacity="0.5" stroke-width="1"/>
+  <path d="M 43.25 19.26 A 17.0 17.0 0 1 0 43.25 44.74 A 13.6 13.6 0 0 1 43.25 19.26 Z" fill="url(#gold)"/>
+  <polygon points="41.50,19.30 42.73,22.80 46.45,22.89 43.50,25.15 44.56,28.71 41.50,26.60 38.44,28.71 39.50,25.15 36.55,22.89 40.27,22.80" fill="url(#gold)"/>
+</svg>

@@ -4,10 +4,8 @@ import * as api from '../services/api'
 import { useSettings } from '../context/settings'
 
 /**
- * Demo admin passcode for this static build. It gates the panel UI only —
- * it is NOT real security (anyone can read the bundle). A production
- * deployment needs a real backend with authenticated admins; the data
- * contract is in public/api/v1/openapi.json.
+ * Admin passcode for the panel (see README). Client-side gate for this
+ * static deployment; a hosted backend would use authenticated admins.
  */
 const ADMIN_PASSCODE = 'albaqaa-admin'
 
@@ -51,7 +49,7 @@ export default function AdminView({ onDataChanged }: Props) {
     a.download = 'database.json'
     a.click()
     URL.revokeObjectURL(url)
-    setNotice('Exported. To publish to every visitor: commit this file as public/data/database.json in the GitHub repo and push — the next deploy updates the shared database.')
+    setNotice('Exported database.json. Commit it as public/data/database.json and push to publish the update to all visitors.')
   }
 
   const doImport = async (file: File) => {
@@ -97,8 +95,8 @@ export default function AdminView({ onDataChanged }: Props) {
             {t('admin_unlock')}
           </button>
           <p className="th-muted text-xs leading-relaxed">
-            Demo passcode for this static build: <code className="font-mono">albaqaa-admin</code>. It only hides this
-            panel — it is not real security. Production needs an authenticated backend (see the OpenAPI contract).
+            Admins can verify or remove listings, view dataset statistics, and export or import the shared
+            database.
           </p>
           {notice && <p className="text-sm font-medium text-rose-700">{notice}</p>}
         </div>

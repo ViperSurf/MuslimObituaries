@@ -1,5 +1,14 @@
 # Changelog — Al-Baqaa (Muslim Obituaries)
 
+## V2.0.1 — 2026-11-11 · Polish
+- Community listings replaced with clearly anonymized sample
+  placeholders (no photographs, no fictional people as real passings).
+- New emblem: gold crescent and star on deep emerald (site icon,
+  header mark, share-preview image).
+- Admin panel copy rewritten in product wording; changelog entry
+  titles made consistent.
+
+
 ## V2.0 — 2026-11-11 · The merge
 The two Al-Baqaa builds finished together: the original feature-rich
 August 2026 build merged into the deployed codebase.
@@ -35,7 +44,7 @@ CI/CD). Listings + filters, 3-step submission portal, Janazah Maps
 links + .ics export, Memory Wall, dua counter, Sadaqah tracker, Janazah
 alerts, vendor directory, OpenAPI 3.0 contract served from the app.
 
-## V1.0 — 2026-08-09 · Original build (Bara Zalloum)
+## V1.0 — 2026-08-09 · Original build
 Initial platform from the original spec: rich obituary profiles,
 tip jar, Janazah logistics with Maps + .ics, Memory Wall, Sadaqah
 Jariyah causes, Janazah alerts, verified funeral-services directory.

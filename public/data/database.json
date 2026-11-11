@@ -1,191 +1,87 @@
 {
   "version": 2,
-  "updatedAt": "2026-11-11T14:00:00Z",
+  "updatedAt": "2026-11-11T17:00:00Z",
   "obituaries": [
     {
-      "id": "obit-1",
-      "name": "Dr. Tariq Mahmood Al-Hassan",
-      "arabicName": "الدكتور طارق محمود الحسن",
-      "dateOfBirth": "1948-04-12",
-      "dateOfPassing": "2026-08-07",
-      "hijriPassingDate": "24 Safar 1448 AH",
-      "age": 78,
-      "city": "Chicago",
-      "state": "IL",
+      "id": "sample-1",
+      "name": "Deceased Name (Sample)",
+      "dateOfBirth": "1951-03-14",
+      "dateOfPassing": "2026-11-10",
+      "age": 75,
+      "city": "Sample City",
+      "state": "ST",
       "country": "United States",
-      "photoUrl": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=400",
-      "biography": "Dr. Tariq Mahmood Al-Hassan passed away peacefully surrounded by his family. A beloved community leader, physician, and founding trustee of the Bridgeview Islamic Center. Over 40 years, he served as a compassionate cardiologist and mentored hundreds of young Muslim medical professionals.",
+      "biography": "Sample biography — this placeholder shows how a community obituary appears on Al-Baqaa. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Real listings are submitted by families through the submission portal and replace samples like this one.",
       "sect": "Sunni",
-      "family": "Survived by his wife Amina, four children, and nine grandchildren.",
-      "familyMembers": ["Amina Al-Hassan (Wife)", "Dr. Bilal Al-Hassan (Son)", "Dr. Zainab Al-Hassan (Daughter)", "Youssef Al-Hassan (Son)"],
+      "family": "Survived by family members (sample listing).",
+      "familyMembers": [
+        "Spouse (Sample)",
+        "Son (Sample)",
+        "Daughter (Sample)"
+      ],
       "janazah": {
-        "mosque": "Mosque Foundation of Bridgeview",
-        "address": "7360 W 93rd St, Bridgeview, IL 60455",
-        "datetime": "2026-08-09T13:15:00",
-        "afterPrayer": "After Dhuhr Prayer (1:15 PM)",
-        "notes": "Brothers and sisters are invited to attend. Wudu facilities available. Parking in north and south lots.",
-        "cemetery": "Park Hill Muslim Cemetery",
-        "cemeteryAddress": "1100 E Fairview Dr, Bloomington, IL",
-        "burialTime": "Immediately after Janazah prayer"
+        "mosque": "Sample Mosque",
+        "address": "123 Sample Street, Sample City, ST 00000",
+        "datetime": "2026-11-12T13:30:00",
+        "afterPrayer": "After Dhuhr (sample)",
+        "notes": "Sample instructions — parking, ghusl and other details appear here on a real listing.",
+        "cemetery": "Sample Cemetery",
+        "cemeteryAddress": "456 Sample Road, Sample City, ST",
+        "burialTime": "Immediately after Janazah (sample)"
       },
       "condolenceWindow": {
-        "startDate": "2026-08-08",
-        "endDate": "2026-08-11",
-        "visitationAddress": "Al-Hassan Family Residence, 9240 S Harlem Ave, Bridgeview, IL",
-        "visitationHours": "5:00 PM - 9:00 PM daily"
+        "startDate": "2026-11-11",
+        "endDate": "2026-11-13",
+        "visitationAddress": "Sample visitation address",
+        "visitationHours": "5:00 PM - 9:00 PM (sample)"
       },
       "sadaqah": [
-        { "id": "sj-1", "title": "Clean Water Solar Well in Rural Sindh", "organization": "Helping Hand for Relief and Development (HHRD)", "category": "Water Well", "goal": 5000, "raised": 3850, "donationUrl": "https://hhrd.org/water-for-life", "description": "Building a sustainable solar-powered deep water well providing clean drinking water to over 800 villagers in honor of Dr. Tariq Mahmood." },
-        { "id": "sj-2", "title": "Quranic Library Endowment at Bridgeview Academy", "organization": "Bridgeview Education Foundation", "category": "Quran Distribution", "goal": 3000, "raised": 2100, "donationUrl": "https://mosquefoundation.org/endowment", "description": "Sponsoring Tajweed Qurans and Islamic reference texts for youth students." }
+        {
+          "id": "sj-sample-1",
+          "title": "Sample Sadaqah Jariyah project",
+          "organization": "Sample Charity",
+          "category": "Water Well",
+          "goal": 5000,
+          "raised": 1250,
+          "description": "Sample project — a real Sadaqah Jariyah project would describe the cause here and link to the charity's own donation page."
+        }
       ],
-      "duaCount": 142,
-      "verified": true,
-      "kind": "community",
-      "createdAt": "2026-08-07T14:30:00Z"
-    },
-    {
-      "id": "obit-2",
-      "name": "Hajja Mariam Bint Ibrahim Zaid",
-      "arabicName": "الحاجة مريم بنت إبراهيم زيد",
-      "dateOfBirth": "1955-09-18",
-      "dateOfPassing": "2026-08-08",
-      "hijriPassingDate": "25 Safar 1448 AH",
-      "age": 70,
-      "city": "Paterson",
-      "state": "NJ",
-      "country": "United States",
-      "photoUrl": "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=400",
-      "biography": "With heavy hearts, the Zaid and Kaddoura families announce the passing of Hajja Mariam. Known for her boundless hospitality, support for local refugees, and teaching Quran to neighborhood children for over three decades. May Allah expand her grave, fill it with light, and grant her Jannat al-Firdaus.",
-      "sect": "Sunni",
-      "family": "Survived by her husband Sheikh Omar Zaid, son Kareem, and daughters Fatima and Huda.",
-      "familyMembers": ["Sheikh Omar Zaid (Husband)", "Kareem Zaid (Son)", "Fatima Kaddoura (Daughter)", "Huda Zaid (Daughter)"],
-      "janazah": {
-        "mosque": "Islamic Center of Passaic County (ICPC Paterson)",
-        "address": "152 Derrom Ave, Paterson, NJ 07504",
-        "datetime": "2026-08-09T17:15:00",
-        "afterPrayer": "After Asr Prayer (5:15 PM)",
-        "notes": "Condolences will be held in the ICPC Community Center hall following the burial.",
-        "cemetery": "Laurel Grove Muslim Section",
-        "cemeteryAddress": "295 Totowa Rd, Totowa, NJ 07512",
-        "burialTime": "6:15 PM"
-      },
-      "condolenceWindow": {
-        "startDate": "2026-08-09",
-        "endDate": "2026-08-12",
-        "visitationAddress": "ICPC Banquet Hall, 152 Derrom Ave, Paterson, NJ",
-        "visitationHours": "6:30 PM - 9:30 PM"
-      },
-      "sadaqah": [
-        { "id": "sj-3", "title": "Orphan Care & Education Sponsorship", "organization": "Islamic Relief USA", "category": "Orphan Care", "goal": 4000, "raised": 3200, "donationUrl": "https://irusa.org/orphans", "description": "Providing food, clothing, and schooling for 5 orphan children for two full years in memory of Hajja Mariam." }
-      ],
-      "duaCount": 98,
-      "verified": true,
-      "kind": "community",
-      "createdAt": "2026-08-08T09:15:00Z"
-    },
-    {
-      "id": "obit-3",
-      "name": "Sayyid Ali Raza Al-Musawi",
-      "arabicName": "السيد علي رضا الموسوي",
-      "dateOfBirth": "1962-01-30",
-      "dateOfPassing": "2026-08-06",
-      "hijriPassingDate": "23 Safar 1448 AH",
-      "age": 64,
-      "city": "Houston",
-      "state": "TX",
-      "country": "United States",
-      "photoUrl": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=400",
-      "biography": "Sayyid Ali Raza Al-Musawi passed away after a valiant struggle with illness. He was an esteemed architect who designed community centers and advocated tirelessly for interfaith dialogue across Texas.",
-      "sect": "Shia",
-      "family": "Survived by his wife Zahra and sons Hassan and Hussein.",
-      "familyMembers": ["Zahra Al-Musawi (Wife)", "Hassan Al-Musawi (Son)", "Hussein Al-Musawi (Son)"],
-      "janazah": {
-        "mosque": "IEC Houston (Islamic Education Center)",
-        "address": "2313 S Voss Rd, Houston, TX 77057",
-        "datetime": "2026-08-08T13:30:00",
-        "afterPrayer": "After Dhuhr Prayer (1:30 PM)",
-        "cemetery": "Forest Park Westheimer Islamic Garden",
-        "cemeteryAddress": "12800 Westheimer Rd, Houston, TX 77077"
-      },
-      "condolenceWindow": {
-        "startDate": "2026-08-07",
-        "endDate": "2026-08-10",
-        "visitationAddress": "IEC Houston Main Hall, 2313 S Voss Rd, Houston, TX",
-        "visitationHours": "6:00 PM - 9:00 PM"
-      },
-      "sadaqah": [
-        { "id": "sj-4", "title": "Clean Water Plant in East Africa", "organization": "Zahra Trust", "category": "Water Well", "goal": 6000, "raised": 5100, "donationUrl": "https://zahratrust.org/water", "description": "Establishing a solar water filtration station dedicated to Sayyid Ali Raza Al-Musawi." }
-      ],
-      "duaCount": 87,
-      "verified": true,
-      "kind": "community",
-      "createdAt": "2026-08-06T18:00:00Z"
-    },
-    {
-      "id": "obit-4",
-      "name": "Ustadh Bilal Kareem Vance",
-      "arabicName": "الأستاذ بلال كريم فانس",
-      "dateOfBirth": "1976-11-05",
-      "dateOfPassing": "2026-08-05",
-      "hijriPassingDate": "22 Safar 1448 AH",
-      "age": 49,
-      "city": "Toronto",
-      "state": "ON",
-      "country": "Canada",
-      "photoUrl": "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&q=80&w=300",
-      "biography": "Ustadh Bilal Vance returned to his Creator at age 49. A dedicated educator, youth mentor, and revert advocate who helped welcome hundreds of new Muslims to the faith in Greater Toronto.",
-      "sect": "Non-denominational",
-      "family": "Survived by his wife Khadijah, son Tariq, and daughter Sumayya.",
-      "familyMembers": ["Khadijah Vance (Wife)", "Tariq Vance (Son)", "Sumayya Vance (Daughter)"],
-      "janazah": {
-        "mosque": "IIT - Islamic Institute of Toronto",
-        "address": "1630 Neilson Rd, Toronto, ON M1X 1S3",
-        "datetime": "2026-08-07T13:30:00",
-        "afterPrayer": "After Dhuhr Prayer (1:30 PM)",
-        "cemetery": "Toronto Muslim Cemetery",
-        "cemeteryAddress": "14765 Leslie St, Richmond Hill, ON"
-      },
-      "condolenceWindow": {
-        "startDate": "2026-08-06",
-        "endDate": "2026-08-09",
-        "visitationAddress": "IIT Community Centre"
-      },
-      "sadaqah": [
-        { "id": "sj-5", "title": "New Muslim Welcome & Education Fund", "organization": "IIT Education Trust", "category": "Mosque Construction", "goal": 7500, "raised": 7500, "donationUrl": "https://islamicinstitute.ca/donate", "description": "Sponsoring mentorship toolkits, English Quran translations, and educational courses for revert brothers and sisters." }
-      ],
-      "duaCount": 215,
-      "verified": true,
-      "kind": "community",
-      "createdAt": "2026-08-05T11:20:00Z"
-    },
-    {
-      "id": "obit-5",
-      "name": "Hajjah Maryam Abdullah",
-      "arabicName": "مريم عبد الله",
-      "dateOfPassing": "2026-11-08",
-      "age": 84,
-      "city": "Champaign",
-      "state": "IL",
-      "country": "United States",
-      "biography": "A beloved mother, grandmother, and longtime teacher of the community Sunday school. She was known for her open door, her Qur'an circle, and the soup she brought to every family in hardship. May Allah have mercy on her and grant her Jannat al-Firdaws.",
-      "sect": "Sunni",
-      "family": "Survived by her children Fatima, Yusuf, and Bilal, and nine grandchildren.",
-      "janazah": {
-        "mosque": "Central Illinois Mosque & Islamic Center (CIMIC)",
-        "address": "106 S Lincoln Ave, Urbana, IL 61801",
-        "datetime": "2026-11-09T13:30:00",
-        "afterPrayer": "After Dhuhr",
-        "notes": "Parking in the rear lot. Ghusl completed at the mosque.",
-        "cemetery": "Mount Hope Cemetery",
-        "cemeteryAddress": "611 E Pennsylvania Ave, Champaign, IL 61820"
-      },
-      "sadaqah": [
-        { "id": "sj-6", "title": "Solar water well in her name", "organization": "Community Sadaqah Jariyah", "category": "Water Well", "goal": 2500, "raised": 1675, "description": "A solar-powered water well established as Sadaqah Jariyah in her name." }
-      ],
-      "duaCount": 213,
+      "duaCount": 12,
       "verified": false,
       "kind": "community",
-      "createdAt": "2026-11-08T08:00:00Z"
+      "createdAt": "2026-11-11T17:00:00Z"
+    },
+    {
+      "id": "sample-2",
+      "name": "Second Sample Obituary",
+      "dateOfPassing": "2026-11-05",
+      "age": 68,
+      "city": "Another City",
+      "state": "ST",
+      "country": "United States",
+      "biography": "Anonymized sample listing with no Janazah details, showing how a memorial without a scheduled prayer appears. Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt.",
+      "sect": "Non-denominational",
+      "family": "Family details appear here on a real listing.",
+      "duaCount": 3,
+      "verified": false,
+      "kind": "community",
+      "createdAt": "2026-11-11T17:00:00Z"
+    },
+    {
+      "id": "sample-3",
+      "name": "Third Sample Obituary",
+      "dateOfPassing": "2026-10-28",
+      "age": 81,
+      "city": "Sample City",
+      "state": "ST",
+      "country": "United States",
+      "biography": "Anonymized sample listing. Real obituaries include a biography written by the family, surviving relatives, Janazah logistics, a Memory Wall, and any Sadaqah Jariyah projects established in the deceased's name.",
+      "sect": "Shia",
+      "family": "Family details appear here on a real listing.",
+      "duaCount": 7,
+      "verified": false,
+      "kind": "community",
+      "createdAt": "2026-11-11T17:00:00Z"
     },
     {
       "id": "scholar-1",
@@ -310,15 +206,117 @@
     }
   ],
   "condolences": [
-    { "id": "c-1", "obituaryId": "obit-1", "author": "Dr. Sameer Siddiqui", "relationship": "Colleague & Friend", "message": "Inna lillahi wa inna ilayhi raji'un. Dr. Tariq was a giant of humility and medical skill. He was my mentor during residency at Rush Medical Center. May Allah grant him the company of the Prophets and the Righteous in Firdous.", "arabicDua": "اللَّهُمَّ اغْفِرْ لَهُ وَارْحَمْهُ وَعَافِهِ وَاعْفُ عَنْهُ", "duaCount": 28, "createdAt": "2026-08-08T10:14:00Z" },
-    { "id": "c-2", "obituaryId": "obit-1", "author": "Fatima & Yasir Farooqi", "relationship": "Family Friends", "message": "Our deepest condolences to Sr. Amina and the children. Dr. Tariq's generosity to the Bridgeview community will never be forgotten. May Allah make his grave a garden from the gardens of Paradise.", "arabicDua": "اللَّهُمَّ أَدْخِلْهُ الْجَنَّةَ وَأَعِذْهُ مِنْ عَذَابِ الْقَبْرِ", "duaCount": 19, "createdAt": "2026-08-08T12:30:00Z" },
-    { "id": "c-3", "obituaryId": "obit-2", "author": "Aisha El-Sayed", "relationship": "Former Student", "message": "Hajja Mariam taught me my first Arabic letters 25 years ago in Paterson. She was like a mother to the entire community. May Allah elevate her rank in Jannat al-Firdaus.", "arabicDua": "إِنَّا لِلَّهِ وَإِنَّا إِلَيْهِ رَاجِعُونَ", "duaCount": 14, "createdAt": "2026-08-09T08:00:00Z" }
+    {
+      "id": "c-sample-1",
+      "obituaryId": "sample-1",
+      "author": "Community Member (Sample)",
+      "relationship": "Friend (Sample)",
+      "message": "Sample condolence message. Inna lillahi wa inna ilayhi raji'un — may Allah grant the family patience and reward.",
+      "arabicDua": "اللَّهُمَّ اغْفِرْ لَهُ وَارْحَمْهُ وَعَافِهِ وَاعْفُ عَنْهُ",
+      "duaCount": 2,
+      "createdAt": "2026-11-11T17:05:00Z"
+    }
   ],
   "vendors": [
-    { "id": "v-1", "name": "Al-Rahma Muslim Funeral Home & Ghusl Services", "category": "Licensed Funeral Home", "city": "Chicago", "state": "IL", "phone": "(708) 555-0199", "email": "info@alrahmafuneral.com", "website": "https://alrahmafuneral.com", "address": "8400 S Cicero Ave, Burbank, IL 60459", "rating": 4.9, "reviewCount": 88, "verified": true, "services": ["24/7 Emergency Transport", "Licensed Muslim Funeral Directors", "Ghusl & Shrouding (Kafan) Facilities", "Cemetery Plot Coordination", "State Death Certificate Processing"] },
-    { "id": "v-2", "name": "Mosque Foundation Janazah & Ghusl Center", "category": "Local Mosque", "city": "Bridgeview", "state": "IL", "phone": "(708) 430-5666", "email": "janazah@mosquefoundation.org", "website": "https://mosquefoundation.org/janazah", "address": "7360 W 93rd St, Bridgeview, IL 60455", "rating": 5.0, "reviewCount": 142, "verified": true, "services": ["Complimentary Janazah Prayer Coordination", "Community Ghusl Facility", "Burial Plot Assistance", "Azaa Condolence Hall Reservation"] },
-    { "id": "v-3", "name": "Park Hill Muslim Gardens & Perpetual Care Cemetery", "category": "Muslim Cemetery", "city": "Bloomington", "state": "IL", "phone": "(309) 555-0144", "email": "cemetery@parkhillmuslim.org", "website": "https://parkhillmuslim.org", "address": "1100 E Fairview Dr, Bloomington, IL 61701", "rating": 4.8, "reviewCount": 64, "verified": true, "services": ["100% Qibla-Oriented Burial Plots", "Perpetual Islamic Maintenance Fund", "Immediate Next-Day Burial", "Family Plot Reservation"] },
-    { "id": "v-4", "name": "Wasiyyah Islamic Estate Planning & Legal Counsel", "category": "Legal & Wasiyyah", "city": "Chicago", "state": "IL", "phone": "(312) 555-0177", "email": "contact@wasiyyahlaw.com", "website": "https://wasiyyahlaw.com", "address": "100 N LaSalle St, Chicago, IL 60602", "rating": 4.9, "reviewCount": 39, "verified": true, "services": ["Sharia-Compliant Islamic Wills (Wasiyyah)", "Probate & Estate Administration", "Healthcare Power of Attorney with Islamic Burial Directives"] },
-    { "id": "v-5", "name": "Paterson Islamic Mortuary Services", "category": "Licensed Funeral Home", "city": "Paterson", "state": "NJ", "phone": "(973) 555-0122", "email": "help@patersonislamicfuneral.org", "website": "https://patersonislamicfuneral.org", "address": "210 Main St, Paterson, NJ 07505", "rating": 4.9, "reviewCount": 110, "verified": true, "services": ["24/7 Response Unit", "Female & Male Experienced Ghusl Teams", "International Repatriation Support", "Laurel Grove Cemetery Plot Booking"] }
+    {
+      "id": "v-1",
+      "name": "Al-Rahma Muslim Funeral Home & Ghusl Services",
+      "category": "Licensed Funeral Home",
+      "city": "Chicago",
+      "state": "IL",
+      "phone": "(708) 555-0199",
+      "email": "info@alrahmafuneral.com",
+      "website": "https://alrahmafuneral.com",
+      "address": "8400 S Cicero Ave, Burbank, IL 60459",
+      "rating": 4.9,
+      "reviewCount": 88,
+      "verified": true,
+      "services": [
+        "24/7 Emergency Transport",
+        "Licensed Muslim Funeral Directors",
+        "Ghusl & Shrouding (Kafan) Facilities",
+        "Cemetery Plot Coordination",
+        "State Death Certificate Processing"
+      ]
+    },
+    {
+      "id": "v-2",
+      "name": "Mosque Foundation Janazah & Ghusl Center",
+      "category": "Local Mosque",
+      "city": "Bridgeview",
+      "state": "IL",
+      "phone": "(708) 430-5666",
+      "email": "janazah@mosquefoundation.org",
+      "website": "https://mosquefoundation.org/janazah",
+      "address": "7360 W 93rd St, Bridgeview, IL 60455",
+      "rating": 5.0,
+      "reviewCount": 142,
+      "verified": true,
+      "services": [
+        "Complimentary Janazah Prayer Coordination",
+        "Community Ghusl Facility",
+        "Burial Plot Assistance",
+        "Azaa Condolence Hall Reservation"
+      ]
+    },
+    {
+      "id": "v-3",
+      "name": "Park Hill Muslim Gardens & Perpetual Care Cemetery",
+      "category": "Muslim Cemetery",
+      "city": "Bloomington",
+      "state": "IL",
+      "phone": "(309) 555-0144",
+      "email": "cemetery@parkhillmuslim.org",
+      "website": "https://parkhillmuslim.org",
+      "address": "1100 E Fairview Dr, Bloomington, IL 61701",
+      "rating": 4.8,
+      "reviewCount": 64,
+      "verified": true,
+      "services": [
+        "100% Qibla-Oriented Burial Plots",
+        "Perpetual Islamic Maintenance Fund",
+        "Immediate Next-Day Burial",
+        "Family Plot Reservation"
+      ]
+    },
+    {
+      "id": "v-4",
+      "name": "Wasiyyah Islamic Estate Planning & Legal Counsel",
+      "category": "Legal & Wasiyyah",
+      "city": "Chicago",
+      "state": "IL",
+      "phone": "(312) 555-0177",
+      "email": "contact@wasiyyahlaw.com",
+      "website": "https://wasiyyahlaw.com",
+      "address": "100 N LaSalle St, Chicago, IL 60602",
+      "rating": 4.9,
+      "reviewCount": 39,
+      "verified": true,
+      "services": [
+        "Sharia-Compliant Islamic Wills (Wasiyyah)",
+        "Probate & Estate Administration",
+        "Healthcare Power of Attorney with Islamic Burial Directives"
+      ]
+    },
+    {
+      "id": "v-5",
+      "name": "Paterson Islamic Mortuary Services",
+      "category": "Licensed Funeral Home",
+      "city": "Paterson",
+      "state": "NJ",
+      "phone": "(973) 555-0122",
+      "email": "help@patersonislamicfuneral.org",
+      "website": "https://patersonislamicfuneral.org",
+      "address": "210 Main St, Paterson, NJ 07505",
+      "rating": 4.9,
+      "reviewCount": 110,
+      "verified": true,
+      "services": [
+        "24/7 Response Unit",
+        "Female & Male Experienced Ghusl Teams",
+        "International Repatriation Support",
+        "Laurel Grove Cemetery Plot Booking"
+      ]
+    }
   ]
 }

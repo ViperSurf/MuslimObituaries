@@ -2,6 +2,16 @@ import { useSettings } from '../context/settings'
 
 export const CHANGELOG = [
   {
+    version: 'V2.0.1',
+    date: '2026-11-11',
+    title: 'Polish — placeholder data, emblem, copy cleanup',
+    items: [
+      'Community listings are now clearly anonymized sample placeholders (no photographs, no fictional people presented as real passings).',
+      'New Al-Baqaa emblem: a gold crescent and star on deep emerald, used as the site icon, header mark, and share-preview image.',
+      'Admin panel copy rewritten in product wording; changelog entry titles made consistent.',
+    ],
+  },
+  {
     version: 'V2.0',
     date: '2026-11-11',
     title: 'The merge — both original builds, finished together',
@@ -30,7 +40,7 @@ export const CHANGELOG = [
   {
     version: 'V1.0',
     date: '2026-08-09',
-    title: 'Original build (Bara Zalloum)',
+    title: 'Original build',
     items: [
       'Initial Al-Baqaa platform: rich obituary profiles with portraits, biographies, family members and sect tags; tip jar; Janazah logistics with Maps and .ics export; Memory Wall; Sadaqah Jariyah causes with fundraising trackers; Janazah alerts; verified funeral-services directory.',
     ],
