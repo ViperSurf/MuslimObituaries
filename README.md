@@ -41,3 +41,23 @@ npm run build   # typecheck + production build
 ```
 
 See `CHANGELOG.md` for version history.
+
+## Server mode
+The same frontend runs against a real API instead of the static
+database file — the data layer (`src/services/api.ts`) switches on one
+build-time variable:
+
+```bash
+npm run server                                  # reference API on http://localhost:8787
+VITE_API_URL=http://localhost:8787 npm run dev  # frontend in server mode
+```
+
+`server/server.mjs` is a zero-dependency Node server implementing the
+full OpenAPI contract (`public/api/v1/openapi.json`): obituaries,
+condolences, duas, vendors, alert subscriptions, tips, and
+passcode-gated admin operations (`x-admin-passcode` header, default
+`albaqaa-admin`, override with the `ADMIN_PASSCODE` env var). Data
+persists to `server/data.json`, seeded from
+`public/data/database.json` on first run. Without `VITE_API_URL`, the
+build stays in static mode (public database.json + browser overlays) —
+which is how the GitHub Pages deployment runs.

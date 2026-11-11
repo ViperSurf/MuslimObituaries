@@ -34,6 +34,7 @@ export default function AdminView({ onDataChanged }: Props) {
   const unlock = () => {
     if (code === ADMIN_PASSCODE) {
       sessionStorage.setItem('albaqaa.admin', '1')
+      sessionStorage.setItem('albaqaa.adminCode', code)
       setUnlocked(true)
     } else {
       setNotice('Incorrect passcode.')
@@ -59,8 +60,8 @@ export default function AdminView({ onDataChanged }: Props) {
       setNotice('Database imported on this device. Reloading data…')
       onDataChanged()
       await refresh()
-    } catch {
-      setNotice('Import failed — that file is not a valid Al-Baqaa database.')
+    } catch (e) {
+      setNotice(e instanceof Error ? e.message : 'Import failed — that file is not a valid Al-Baqaa database.')
     }
   }
 
@@ -98,6 +99,7 @@ export default function AdminView({ onDataChanged }: Props) {
             Admins can verify or remove listings, view dataset statistics, and export or import the shared
             database.
           </p>
+          <p className="th-muted border-t th-border pt-3 text-xs leading-relaxed">{t('admin_test_note')}</p>
           {notice && <p className="text-sm font-medium text-rose-700">{notice}</p>}
         </div>
       </div>

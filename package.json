@@ -3,11 +3,12 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "Al-Baqaa (البقاء) — Muslim community obituary & memorial platform: Janazah logistics, Memory Wall condolences, and Sadaqah Jariyah tracking.",
+  "description": "Al-Baqaa (\u0627\u0644\u0628\u0642\u0627\u0621) \u2014 Muslim community obituary & memorial platform: Janazah logistics, Memory Wall condolences, and Sadaqah Jariyah tracking.",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "server": "node server/server.mjs"
   },
   "dependencies": {
     "lucide-react": "^0.469.0",

@@ -2,8 +2,8 @@
   "openapi": "3.0.3",
   "info": {
     "title": "Al-Baqaa API",
-    "version": "2.0.0",
-    "description": "Al-Baqaa \u2014 Muslim obituary & memorial platform API contract. V2 implementation: the canonical dataset (obituaries, condolences, vendors) is served as one public JSON database at /data/database.json that every visitor loads; visitor-local actions (submissions, duas, condolences, alert subscriptions, tips) are LocalStorage overlays on top of it. The Admin panel moderates records and exports an updated database.json, which is published by committing it to the repository. This contract remains the swap-in point for a hosted backend with authenticated admins."
+    "version": "2.1.0",
+    "description": "Al-Baqaa \u2014 Muslim obituary & memorial platform API contract. V2 implementation: the canonical dataset (obituaries, condolences, vendors) is served as one public JSON database at /data/database.json that every visitor loads; visitor-local actions (submissions, duas, condolences, alert subscriptions, tips) are LocalStorage overlays on top of it. The Admin panel moderates records and exports an updated database.json, which is published by committing it to the repository. This contract remains the swap-in point for a hosted backend with authenticated admins. Server mode (V2.0.2): the same frontend runs against a real API when built with VITE_API_URL set; a zero-dependency reference server (server/server.mjs) implements every endpoint below, with admin operations requiring an x-admin-passcode header."
   },
   "servers": [
     {
@@ -123,6 +123,27 @@
           },
           "404": {
             "description": "Not found"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete an obituary (admin)",
+        "parameters": [
+          {
+            "name": "x-admin-passcode",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Deleted"
+          },
+          "401": {
+            "description": "Admin passcode required"
           }
         }
       }
@@ -311,7 +332,73 @@
         }
       }
     },
-    "/data/database.json": {
+    "/obituaries/{id}/verified": {
+      "patch": {
+        "summary": "Set the verified flag on an obituary (admin)",
+        "parameters": [
+          {
+            "name": "x-admin-passcode",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Updated obituary"
+          },
+          "401": {
+            "description": "Admin passcode required"
+          }
+        }
+      }
+    },
+    "/condolences/{id}/dua": {
+      "post": {
+        "summary": "Offer a dua for a single condolence message",
+        "responses": {
+          "200": {
+            "description": "New dua count for the message"
+          }
+        }
+      }
+    },
+    "/tips": {
+      "post": {
+        "summary": "Record an optional platform tip",
+        "responses": {
+          "201": {
+            "description": "Tip recorded"
+          }
+        }
+      }
+    },
+    "/admin/stats": {
+      "get": {
+        "summary": "Dataset statistics (admin)",
+        "parameters": [
+          {
+            "name": "x-admin-passcode",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Counts of obituaries, condolences, vendors, subscriptions and tips total"
+          },
+          "401": {
+            "description": "Admin passcode required"
+          }
+        }
+      }
+    },
+    "/database": {
       "get": {
         "summary": "Fetch the shared public database (all obituaries, condolences, vendors)",
         "responses": {

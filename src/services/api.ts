@@ -11,18 +11,35 @@ import type {
 } from '../types'
 
 /**
- * Al-Baqaa V2 data layer.
+ * Al-Baqaa data layer — two modes, one contract (public/api/v1/openapi.json):
  *
- * Canonical data (obituaries, condolences, vendors) lives in a single
- * public JSON "database" served with the site at data/database.json —
- * every visitor sees the same records, and updating the platform means
- * committing a new database.json (the Admin panel exports it).
+ * STATIC mode (default): the canonical dataset is the public JSON file at
+ * data/database.json; visitor actions are LocalStorage overlays on top of it.
  *
- * Visitor-local state (own submissions, duas offered, condolences,
- * alert subscriptions, tips) is kept in LocalStorage as an overlay on
- * top of the canonical data. A hosted backend can replace this file
- * later without changing the UI (contract: public/api/v1/openapi.json).
+ * SERVER mode: set VITE_API_URL at build time (e.g. http://localhost:8787)
+ * and every read/write goes to that API instead — a zero-dependency
+ * reference server ships in server/server.mjs. The UI never changes.
  */
+
+const API_BASE = ((import.meta.env.VITE_API_URL as string | undefined) ?? '').replace(/\/$/, '')
+export const SERVER_MODE = API_BASE.length > 0
+
+async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
+  const res = await fetch(`${API_BASE}${path}`, {
+    ...init,
+    headers: { 'Content-Type': 'application/json', ...(init?.headers ?? {}) },
+  })
+  if (!res.ok) throw new Error(`API ${res.status} on ${path}`)
+  return (await res.json()) as T
+}
+
+function adminHeaders(): Record<string, string> {
+  try {
+    return { 'x-admin-passcode': sessionStorage.getItem('albaqaa.adminCode') ?? '' }
+  } catch {
+    return {}
+  }
+}
 
 const K = {
   myObituaries: 'albaqaa.v2.myObituaries',
@@ -59,8 +76,17 @@ function uid(prefix: string): string {
 
 let dbPromise: Promise<Database> | null = null
 
-/** Load the canonical shared dataset (imported override wins over the served file). */
-export function loadDatabase(): Promise<Database> {
+/** Load the canonical shared dataset (server API, imported override, or the served file). */
+export function loadDatabase(force = false): Promise<Database> {
+  if (force) dbPromise = null
+  if (SERVER_MODE) {
+    if (!dbPromise) {
+      dbPromise = apiFetch<Database>('/api/v1/database').catch(
+        () => ({ version: 2, updatedAt: '', obituaries: [], condolences: [], vendors: [] }) as Database,
+      )
+    }
+    return dbPromise
+  }
   const imported = read<Database | null>(K.importedDb, null)
   if (imported) return Promise.resolve(imported)
   if (!dbPromise) {
@@ -74,7 +100,28 @@ export function loadDatabase(): Promise<Database> {
   return dbPromise
 }
 
+/**
+ * Sample listings always showcase a live Janazah: if a sample's Janazah
+ * time has passed, roll it to today (same time) or tomorrow, so the
+ * upcoming-Janazah highlight, filters and .ics export always have a
+ * working example. Real listings are never touched.
+ */
+function rollSampleJanazah(o: Obituary): Obituary {
+  if (!o.id.startsWith('sample') || !o.janazah) return o
+  const orig = new Date(o.janazah.datetime)
+  if (isNaN(orig.getTime())) return o
+  const now = new Date()
+  if (orig.getTime() > now.getTime()) return o
+  const target = new Date()
+  target.setHours(orig.getHours(), orig.getMinutes(), 0, 0)
+  if (target.getTime() <= now.getTime()) target.setDate(target.getDate() + 1)
+  const pad = (n: number) => String(n).padStart(2, '0')
+  const local = `${target.getFullYear()}-${pad(target.getMonth() + 1)}-${pad(target.getDate())}T${pad(target.getHours())}:${pad(target.getMinutes())}:00`
+  return { ...o, janazah: { ...o.janazah, datetime: local } }
+}
+
 function applyOverlays(db: Database): Obituary[] {
+  if (SERVER_MODE) return db.obituaries.map(rollSampleJanazah)
   const deleted = new Set(read<string[]>(K.deletedIds, []))
   const overrides = read<Record<string, boolean>>(K.verifiedOverrides, {})
   const deltas = read<Record<string, number>>(K.duaDeltas, {})
@@ -87,10 +134,11 @@ function applyOverlays(db: Database): Obituary[] {
       duaCount: o.duaCount + (deltas[o.id] ?? 0),
     }))
   const mineVisible = mine.filter((o) => !deleted.has(o.id))
-  return [...mineVisible, ...canonical]
+  return [...mineVisible, ...canonical].map(rollSampleJanazah)
 }
 
 function mergedCondolences(db: Database): Condolence[] {
+  if (SERVER_MODE) return [...db.condolences]
   const deltas = read<Record<string, number>>(K.condolenceDuaDeltas, {})
   const mine = read<Condolence[]>(K.myCondolences, [])
   const canonical = db.condolences.map((c) => ({ ...c, duaCount: c.duaCount + (deltas[c.id] ?? 0) }))
@@ -145,13 +193,25 @@ export async function listRegions(): Promise<string[]> {
 
 /** GET /api/v1/obituaries/{id} */
 export async function getObituary(id: string): Promise<Obituary | null> {
+  if (SERVER_MODE) {
+    try {
+      const o = await apiFetch<Obituary>(`/api/v1/obituaries/${encodeURIComponent(id)}`)
+      return rollSampleJanazah(o)
+    } catch {
+      return null
+    }
+  }
   const db = await loadDatabase()
   return applyOverlays(db).find((o) => o.id === id) ?? null
 }
 
-/** POST /api/v1/obituaries — stored as a local submission overlay in V2-static;
- *  an admin can fold it into the shared database.json from the Admin panel. */
+/** POST /api/v1/obituaries */
 export async function createObituary(input: ObituaryInput): Promise<Obituary> {
+  if (SERVER_MODE) {
+    const saved = await apiFetch<Obituary>('/api/v1/obituaries', { method: 'POST', body: JSON.stringify(input) })
+    dbPromise = null
+    return saved
+  }
   const obituary: Obituary = {
     ...input,
     id: uid('obit'),
@@ -167,6 +227,10 @@ export async function createObituary(input: ObituaryInput): Promise<Obituary> {
 
 /** POST /api/v1/obituaries/{id}/dua */
 export async function incrementDua(id: string): Promise<number> {
+  if (SERVER_MODE) {
+    const r = await apiFetch<{ duaCount: number }>(`/api/v1/obituaries/${encodeURIComponent(id)}/dua`, { method: 'POST' })
+    return r.duaCount
+  }
   const deltas = read<Record<string, number>>(K.duaDeltas, {})
   deltas[id] = (deltas[id] ?? 0) + 1
   write(K.duaDeltas, deltas)
@@ -176,6 +240,10 @@ export async function incrementDua(id: string): Promise<number> {
 
 /** GET /api/v1/obituaries/{id}/condolences */
 export async function listCondolences(obituaryId: string): Promise<Condolence[]> {
+  if (SERVER_MODE) {
+    const list = await apiFetch<Condolence[]>(`/api/v1/obituaries/${encodeURIComponent(obituaryId)}/condolences`)
+    return list.sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt))
+  }
   const db = await loadDatabase()
   return mergedCondolences(db)
     .filter((c) => c.obituaryId === obituaryId)
@@ -190,6 +258,12 @@ export async function addCondolence(
   relationship?: string,
   arabicDua?: string,
 ): Promise<Condolence> {
+  if (SERVER_MODE) {
+    return apiFetch<Condolence>(`/api/v1/obituaries/${encodeURIComponent(obituaryId)}/condolences`, {
+      method: 'POST',
+      body: JSON.stringify({ author, message, relationship, arabicDua }),
+    })
+  }
   const condolence: Condolence = {
     id: uid('cond'),
     obituaryId,
@@ -206,7 +280,12 @@ export async function addCondolence(
   return condolence
 }
 
+/** POST /api/v1/condolences/{id}/dua */
 export async function incrementCondolenceDua(id: string): Promise<number> {
+  if (SERVER_MODE) {
+    const r = await apiFetch<{ duaCount: number }>(`/api/v1/condolences/${encodeURIComponent(id)}/dua`, { method: 'POST' })
+    return r.duaCount
+  }
   const deltas = read<Record<string, number>>(K.condolenceDuaDeltas, {})
   deltas[id] = (deltas[id] ?? 0) + 1
   write(K.condolenceDuaDeltas, deltas)
@@ -225,6 +304,9 @@ export async function listVendors(category?: VendorCategory | ''): Promise<Vendo
 export async function subscribeAlerts(
   input: Omit<AlertSubscription, 'id' | 'createdAt'>,
 ): Promise<AlertSubscription> {
+  if (SERVER_MODE) {
+    return apiFetch<AlertSubscription>('/api/v1/janazah-alerts/subscribe', { method: 'POST', body: JSON.stringify(input) })
+  }
   const sub: AlertSubscription = { ...input, id: uid('alert'), createdAt: new Date().toISOString() }
   const all = read<AlertSubscription[]>(K.subscriptions, [])
   all.push(sub)
@@ -232,7 +314,11 @@ export async function subscribeAlerts(
   return sub
 }
 
+/** POST /api/v1/tips */
 export async function submitTip(amount: number, donorName?: string): Promise<PlatformTip> {
+  if (SERVER_MODE) {
+    return apiFetch<PlatformTip>('/api/v1/tips', { method: 'POST', body: JSON.stringify({ amount, donorName }) })
+  }
   const tip: PlatformTip = { id: uid('tip'), amount, donorName, createdAt: new Date().toISOString() }
   const all = read<PlatformTip[]>(K.tips, [])
   all.push(tip)
@@ -243,6 +329,11 @@ export async function submitTip(amount: number, donorName?: string): Promise<Pla
 /* ---------------- Admin operations ---------------- */
 
 export async function adminDeleteObituary(id: string): Promise<void> {
+  if (SERVER_MODE) {
+    await apiFetch(`/api/v1/obituaries/${encodeURIComponent(id)}`, { method: 'DELETE', headers: adminHeaders() })
+    dbPromise = null
+    return
+  }
   const mine = read<Obituary[]>(K.myObituaries, [])
   if (mine.some((o) => o.id === id)) {
     write(K.myObituaries, mine.filter((o) => o.id !== id))
@@ -253,22 +344,29 @@ export async function adminDeleteObituary(id: string): Promise<void> {
 }
 
 export async function adminSetVerified(id: string, verified: boolean): Promise<void> {
+  if (SERVER_MODE) {
+    await apiFetch(`/api/v1/obituaries/${encodeURIComponent(id)}/verified`, {
+      method: 'PATCH',
+      headers: adminHeaders(),
+      body: JSON.stringify({ verified }),
+    })
+    dbPromise = null
+    return
+  }
   const overrides = read<Record<string, boolean>>(K.verifiedOverrides, {})
   overrides[id] = verified
   write(K.verifiedOverrides, overrides)
 }
 
-/** Build the next shared database.json: canonical data with admin
- *  deletions/verification applied, local submissions & condolences folded in,
- *  and dua deltas baked into the counts. Commit the exported file to
- *  public/data/database.json to publish it to every visitor. */
+/** Build the next shared database.json (static mode) or fetch the server's
+ *  current database (server mode). Publishing in static mode = commit the
+ *  exported file as public/data/database.json. */
 export async function exportDatabase(): Promise<Database> {
+  if (SERVER_MODE) return loadDatabase(true)
   const db = await loadDatabase()
   return {
     version: db.version + 1,
     updatedAt: new Date().toISOString(),
-    // applyOverlays/mergedCondolences already bake in deletions,
-    // verification overrides, local submissions and dua deltas.
     obituaries: applyOverlays(db),
     condolences: mergedCondolences(db),
     vendors: db.vendors,
@@ -276,6 +374,7 @@ export async function exportDatabase(): Promise<Database> {
 }
 
 export function importDatabase(jsonText: string): Database {
+  if (SERVER_MODE) throw new Error('Import is only available in static (file) mode — in server mode the server owns the data.')
   const parsed = JSON.parse(jsonText) as Database
   if (!Array.isArray(parsed.obituaries) || !Array.isArray(parsed.vendors)) {
     throw new Error('Not an Al-Baqaa database file')
@@ -293,6 +392,16 @@ export async function adminStats(): Promise<{
   tipsTotal: number
   mySubmissions: number
 }> {
+  if (SERVER_MODE) {
+    const s = await apiFetch<{
+      obituaries: number
+      condolences: number
+      vendors: number
+      subscriptions: number
+      tipsTotal: number
+    }>('/api/v1/admin/stats', { headers: adminHeaders() })
+    return { ...s, mySubmissions: 0 }
+  }
   const db = await loadDatabase()
   const tips = read<PlatformTip[]>(K.tips, [])
   return {
@@ -300,7 +409,7 @@ export async function adminStats(): Promise<{
     condolences: mergedCondolences(db).length,
     vendors: db.vendors.length,
     subscriptions: read<AlertSubscription[]>(K.subscriptions, []).length,
-    tipsTotal: tips.reduce((s, t) => s + t.amount, 0),
+    tipsTotal: tips.reduce((sum, tip) => sum + tip.amount, 0),
     mySubmissions: read<Obituary[]>(K.myObituaries, []).length,
   }
 }

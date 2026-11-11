@@ -1,5 +1,17 @@
 # Changelog — Al-Baqaa (Muslim Obituaries)
 
+## V2.0.2 — 2026-11-11 · Server-ready data layer
+- Scholars collection narrowed to one verified passing: Sheikh Abdul
+  Aziz ibn Baz (d. 13 May 1999).
+- The sample obituary's Janazah rolls forward daily, so the
+  upcoming-Janazah features always have a live example.
+- Server mode: build with `VITE_API_URL` to run the same frontend
+  against a real API; a zero-dependency reference server ships in
+  `server/server.mjs` implementing the full OpenAPI contract.
+- Admin panel shows a short test-deployment note about the
+  database-file backend and the server option.
+
+
 ## V2.0.1 — 2026-11-11 · Polish
 - Community listings replaced with clearly anonymized sample
   placeholders (no photographs, no fictional people as real passings).

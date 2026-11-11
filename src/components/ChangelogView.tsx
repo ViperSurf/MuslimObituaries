@@ -2,6 +2,17 @@ import { useSettings } from '../context/settings'
 
 export const CHANGELOG = [
   {
+    version: 'V2.0.2',
+    date: '2026-11-11',
+    title: 'Server-ready data layer, Ibn Baz scholars collection, rolling sample Janazah',
+    items: [
+      'Scholars collection narrowed to one verified passing: Sheikh Abdul Aziz ibn Baz (d. 13 May 1999).',
+      'The sample obituary’s Janazah now rolls forward to the next day whenever it passes, so the upcoming-Janazah highlighting, filters and calendar export always have a live example.',
+      'Server mode: the data layer can run against a real API (VITE_API_URL) instead of the static database file, and a zero-dependency reference server (server/server.mjs) implementing the full OpenAPI contract ships with the project.',
+      'Admin panel carries a short test-deployment note explaining the database-file backend and the server option.',
+    ],
+  },
+  {
     version: 'V2.0.1',
     date: '2026-11-11',
     title: 'Polish — placeholder data, emblem, copy cleanup',

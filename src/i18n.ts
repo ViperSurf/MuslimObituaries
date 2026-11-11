@@ -108,6 +108,8 @@ const en = {
   f_charity_goal: 'Goal (USD)',
   admin_title: 'Admin panel',
   admin_locked: 'Enter the admin passcode to manage the shared dataset.',
+  admin_test_note:
+    'Test deployment: this demo runs on a shared database file (database.json) rather than a live server. The data layer already speaks the Al-Baqaa API, so it can be pointed at a real server without changing the site (see “Server mode” in the README).',
   admin_unlock: 'Unlock',
   export_btn: 'Export database.json',
   import_btn: 'Import database.json',
