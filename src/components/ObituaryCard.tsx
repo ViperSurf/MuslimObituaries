@@ -1,98 +1,83 @@
-import { CalendarClock, Heart, MapPin } from 'lucide-react'
 import type { Obituary } from '../types'
+import { effectiveAge, formatDate, formatDateTime, locationLine } from '../lib/format'
+import { useSettings } from '../context/settings'
 
-function fmtDate(iso: string): string {
-  return new Date(iso + (iso.length === 10 ? 'T12:00:00' : '')).toLocaleDateString(undefined, {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  })
-}
-
-function fmtDateTime(iso: string): string {
-  return new Date(iso).toLocaleString(undefined, {
-    weekday: 'short',
-    month: 'short',
-    day: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-  })
-}
-
-export default function ObituaryCard({
-  obituary,
-  onOpen,
-}: {
+interface Props {
   obituary: Obituary
   onOpen: (id: string) => void
-}) {
-  const janazahUpcoming =
-    obituary.janazah && new Date(obituary.janazah.datetime).getTime() >= Date.now()
-  const charityPct = obituary.charity
-    ? Math.min(100, Math.round((obituary.charity.raised / obituary.charity.goal) * 100))
-    : 0
+  onQuickDua: (id: string) => void
+  duaGiven: boolean
+}
 
+export default function ObituaryCard({ obituary: o, onOpen, onQuickDua, duaGiven }: Props) {
+  const { t } = useSettings()
+  const upcoming = o.janazah && new Date(o.janazah.datetime).getTime() >= Date.now()
+  const age = effectiveAge(o)
   return (
-    <article className="flex flex-col rounded-2xl border border-emerald-950/10 bg-white p-5 shadow-sm transition hover:shadow-md">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h3 className="font-display text-lg font-semibold text-emerald-950">{obituary.name}</h3>
-          {obituary.arabicName && (
-            <p className="font-arabic text-xl leading-relaxed text-emerald-900/70">{obituary.arabicName}</p>
+    <article className="th-surface flex flex-col overflow-hidden rounded-2xl shadow-sm transition hover:shadow-md">
+      {o.photoUrl && (
+        <img src={o.photoUrl} alt="" className="h-44 w-full object-cover object-top" loading="lazy" />
+      )}
+      <div className="flex flex-1 flex-col p-5">
+        <div className="flex flex-wrap items-center gap-2">
+          {o.verified && (
+            <span className="rounded-full bg-emerald-700 px-2 py-0.5 text-[11px] font-semibold text-white">
+              ✓ {t('verified_badge')}
+            </span>
+          )}
+          {o.kind === 'scholar' && (
+            <span className="th-primary rounded-full px-2 py-0.5 text-[11px] font-semibold">
+              🎓 {t('scholar_badge')}
+            </span>
+          )}
+          {upcoming && (
+            <span className="rounded-full bg-rose-700 px-2 py-0.5 text-[11px] font-semibold text-white">
+              {t('janazah_label')} · {new Date(o.janazah!.datetime).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+            </span>
           )}
         </div>
-        {typeof obituary.age === 'number' && (
-          <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-900">
-            Age {obituary.age}
-          </span>
-        )}
-      </div>
-
-      <p className="mt-1 flex items-center gap-1 text-sm text-stone-500">
-        <MapPin className="h-4 w-4" /> {obituary.city}, {obituary.state} · Died {fmtDate(obituary.dateOfDeath)}
-      </p>
-
-      <p className="mt-3 line-clamp-3 text-sm leading-relaxed text-stone-600">{obituary.biography}</p>
-
-      {obituary.janazah && (
-        <div
-          className={`mt-4 rounded-xl px-3 py-2 text-sm ${
-            janazahUpcoming ? 'bg-emerald-900 text-emerald-50' : 'bg-stone-100 text-stone-600'
-          }`}
-        >
-          <p className="flex items-center gap-2 font-semibold">
-            <CalendarClock className="h-4 w-4" />
-            Janazah: {fmtDateTime(obituary.janazah.datetime)}
-            {obituary.janazah.afterPrayer ? ` (${obituary.janazah.afterPrayer})` : ''}
+        <h3 className="mt-2 text-lg leading-snug font-bold">{o.name}</h3>
+        {o.arabicName && (
+          <p className="font-arabic text-base leading-relaxed opacity-80" dir="rtl" lang="ar">
+            {o.arabicName}
           </p>
-          <p className="mt-0.5 truncate text-xs opacity-80">{obituary.janazah.mosque}</p>
-        </div>
-      )}
-
-      {obituary.charity && (
-        <div className="mt-4">
-          <div className="flex justify-between text-xs font-medium text-stone-500">
-            <span className="truncate pr-2">Sadaqah Jariyah: {obituary.charity.name}</span>
-            <span>
-              ${obituary.charity.raised.toLocaleString()} / ${obituary.charity.goal.toLocaleString()}
+        )}
+        <p className="th-muted mt-1 text-sm">
+          {locationLine(o)}
+          {age !== undefined && <> · {t('age')} {age}</>}
+        </p>
+        <p className="th-muted text-sm">
+          {t('passed')}: {formatDate(o.dateOfPassing)}
+          {o.hijriPassingDate && <> · <span className="font-arabic">{o.hijriPassingDate}</span></>}
+        </p>
+        <p className="mt-3 line-clamp-3 text-sm leading-relaxed">{o.biography}</p>
+        {o.janazah && (
+          <div className="th-surface2 th-border mt-3 rounded-xl border p-3 text-sm">
+            <span className="font-semibold">{t('janazah_prayer')}:</span> {o.janazah.mosque}
+            <br />
+            <span className="th-muted">
+              {formatDateTime(o.janazah.datetime)}
+              {o.janazah.afterPrayer ? ` · ${o.janazah.afterPrayer}` : ''}
             </span>
           </div>
-          <div className="mt-1 h-2 overflow-hidden rounded-full bg-emerald-100">
-            <div className="h-full rounded-full bg-emerald-700" style={{ width: `${charityPct}%` }} />
-          </div>
+        )}
+        <div className="mt-4 flex items-center gap-2 pt-1 mt-auto">
+          <button
+            onClick={() => onOpen(o.id)}
+            className="th-primary flex-1 rounded-xl px-3 py-2 text-sm font-semibold transition hover:opacity-90"
+          >
+            {t('view_dua')}
+          </button>
+          <button
+            onClick={() => onQuickDua(o.id)}
+            disabled={duaGiven}
+            className="rounded-xl bg-rose-700 px-3 py-2 text-sm font-semibold text-white transition hover:bg-rose-800 disabled:cursor-default disabled:bg-rose-300"
+            title={t('offer_dua')}
+          >
+            🤲 {o.duaCount.toLocaleString()}
+          </button>
         </div>
-      )}
-
-      <div className="mt-5 flex items-center justify-between border-t border-stone-100 pt-4">
-        <span className="flex items-center gap-1.5 text-sm font-medium text-rose-700">
-          <Heart className="h-4 w-4 fill-current" /> {obituary.duaCount} duas offered
-        </span>
-        <button
-          onClick={() => onOpen(obituary.id)}
-          className="rounded-full bg-emerald-900 px-4 py-1.5 text-sm font-semibold text-white transition hover:bg-emerald-800"
-        >
-          View &amp; offer dua
-        </button>
+        <p className="th-muted mt-2 text-center text-xs">{t('duas_offered')}</p>
       </div>
     </article>
   )

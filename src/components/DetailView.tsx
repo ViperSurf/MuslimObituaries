@@ -1,226 +1,334 @@
 import { useEffect, useState } from 'react'
-import {
-  ArrowLeft,
-  CalendarPlus,
-  Heart,
-  MapPin,
-  Navigation,
-  Send,
-} from 'lucide-react'
 import type { Condolence, Obituary } from '../types'
-import { addCondolence, getObituary, incrementDua, listCondolences } from '../services/api'
-import { downloadJanazahIcs, mapsUrl } from '../lib/ics'
+import * as api from '../services/api'
+import { DUA_TEMPLATES } from '../data/templates'
+import {
+  downloadIcs,
+  effectiveAge,
+  formatDate,
+  formatDateTime,
+  locationLine,
+  mapsUrl,
+  money,
+  shareObituary,
+} from '../lib/format'
+import { useSettings } from '../context/settings'
 
-const DUA_TEMPLATES = [
-  'Allahumma-ghfir lahu warhamhu — O Allah, forgive them and have mercy on them.',
-  'May Allah grant them Jannat al-Firdaws and give the family patience and strength.',
-  'Inna lillahi wa inna ilayhi raji\'un. May Allah illuminate their grave and expand it for them.',
-]
+interface Props {
+  obituary: Obituary
+  onBack: () => void
+  onDua: (id: string) => void
+  duaGiven: boolean
+}
 
-export default function DetailView({ id, onBack }: { id: string; onBack: () => void }) {
-  const [obituary, setObituary] = useState<Obituary | null>(null)
-  const [condolences, setCondolences] = useState<Condolence[]>([])
+export default function DetailView({ obituary, onBack, onDua, duaGiven }: Props) {
+  const { t } = useSettings()
+  const [wall, setWall] = useState<Condolence[]>([])
   const [author, setAuthor] = useState('')
+  const [relationship, setRelationship] = useState('')
   const [message, setMessage] = useState('')
-  const [duaGiven, setDuaGiven] = useState(false)
-  const [loading, setLoading] = useState(true)
+  const [arabicDua, setArabicDua] = useState('')
+  const [wallDuas, setWallDuas] = useState<Set<string>>(new Set())
+  const [shareState, setShareState] = useState<'idle' | 'done'>('idle')
+  const o = obituary
+  const age = effectiveAge(o)
 
   useEffect(() => {
-    let active = true
-    ;(async () => {
-      const [ob, cs] = await Promise.all([getObituary(id), listCondolences(id)])
-      if (!active) return
-      setObituary(ob)
-      setCondolences(cs)
-      setLoading(false)
-    })()
+    let live = true
+    api.listCondolences(o.id).then((list) => {
+      if (live) setWall(list)
+    })
     return () => {
-      active = false
+      live = false
     }
-  }, [id])
+  }, [o.id])
 
-  if (loading) return <p className="py-16 text-center text-stone-500">Loading…</p>
-  if (!obituary)
-    return (
-      <div className="py-16 text-center">
-        <p className="text-stone-600">This obituary could not be found.</p>
-        <button onClick={onBack} className="mt-4 font-semibold text-emerald-900 underline">
-          Back to all obituaries
-        </button>
-      </div>
-    )
-
-  const handleDua = async () => {
-    if (duaGiven) return
-    const count = await incrementDua(obituary.id)
-    setObituary({ ...obituary, duaCount: count })
-    setDuaGiven(true)
-  }
-
-  const handleCondolence = async (e: React.FormEvent) => {
+  const postWall = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!author.trim() || !message.trim()) return
-    const created = await addCondolence(obituary.id, author.trim(), message.trim())
-    setCondolences([created, ...condolences])
+    const saved = await api.addCondolence(o.id, author.trim(), message.trim(), relationship.trim() || undefined, arabicDua || undefined)
+    setWall((prev) => [saved, ...prev])
     setAuthor('')
+    setRelationship('')
     setMessage('')
+    setArabicDua('')
   }
 
-  const charityPct = obituary.charity
-    ? Math.min(100, Math.round((obituary.charity.raised / obituary.charity.goal) * 100))
-    : 0
+  const giveWallDua = async (id: string) => {
+    if (wallDuas.has(id)) return
+    const count = await api.incrementCondolenceDua(id)
+    setWall((prev) => prev.map((c) => (c.id === id ? { ...c, duaCount: count } : c)))
+    setWallDuas((prev) => new Set(prev).add(id))
+  }
+
+  const onShare = async () => {
+    const result = await shareObituary(o)
+    if (result === 'copied') {
+      setShareState('done')
+      setTimeout(() => setShareState('idle'), 2000)
+    }
+  }
+
+  const windowOpen =
+    o.condolenceWindow &&
+    new Date(`${o.condolenceWindow.startDate}T00:00:00`) <= new Date() &&
+    new Date() <= new Date(`${o.condolenceWindow.endDate}T23:59:59`)
 
   return (
     <div className="mx-auto max-w-3xl">
-      <button
-        onClick={onBack}
-        className="mb-6 flex items-center gap-1 text-sm font-semibold text-emerald-900 hover:underline"
-      >
-        <ArrowLeft className="h-4 w-4" /> All obituaries
-      </button>
-
-      <header className="rounded-3xl bg-emerald-950 px-6 py-8 text-center text-emerald-50 sm:px-10">
-        <p className="font-arabic text-2xl leading-relaxed text-amber-200">
-          إِنَّا لِلَّهِ وَإِنَّا إِلَيْهِ رَاجِعُونَ
-        </p>
-        <p className="mt-1 text-xs tracking-wide text-emerald-200/80">
-          Inna lillahi wa inna ilayhi raji&apos;un — To Allah we belong, and to Him we return
-        </p>
-        <h1 className="font-display mt-5 text-3xl font-bold">{obituary.name}</h1>
-        {obituary.arabicName && <p className="font-arabic mt-1 text-2xl text-emerald-100">{obituary.arabicName}</p>}
-        <p className="mt-2 text-sm text-emerald-200">
-          {obituary.city}, {obituary.state}
-          {typeof obituary.age === 'number' ? ` · Age ${obituary.age}` : ''} · {obituary.sect}
-        </p>
-      </header>
-
-      <section className="mt-6 rounded-2xl border border-emerald-950/10 bg-white p-6">
-        <h2 className="font-display text-lg font-semibold text-emerald-950">About</h2>
-        <p className="mt-2 leading-relaxed text-stone-700">{obituary.biography}</p>
-        <p className="mt-4 text-sm text-stone-600">
-          <span className="font-semibold text-stone-800">Family:</span> {obituary.family}
-        </p>
-
-        <button
-          onClick={handleDua}
-          disabled={duaGiven}
-          className={`mt-6 flex w-full items-center justify-center gap-2 rounded-full py-3 font-semibold transition ${
-            duaGiven
-              ? 'bg-rose-50 text-rose-700'
-              : 'bg-rose-600 text-white hover:bg-rose-500'
-          }`}
-        >
-          <Heart className="h-5 w-5 fill-current" />
-          {duaGiven ? `Dua offered — ${obituary.duaCount} total` : `Offer Rahmah / Say Dua (${obituary.duaCount})`}
+      <div className="mb-4 flex items-center justify-between">
+        <button onClick={onBack} className="text-sm font-semibold underline">
+          ← {t('nav_obituaries')}
         </button>
-      </section>
+        <button
+          onClick={onShare}
+          className="th-surface rounded-full px-4 py-1.5 text-sm font-semibold shadow-sm transition hover:shadow"
+        >
+          🔗 {shareState === 'done' ? t('link_copied') : t('share')}
+        </button>
+      </div>
 
-      {obituary.janazah && (
-        <section className="mt-6 rounded-2xl border border-emerald-950/10 bg-white p-6">
-          <h2 className="font-display text-lg font-semibold text-emerald-950">Janazah Prayer</h2>
-          <div className="mt-3 space-y-2 text-stone-700">
-            <p className="font-semibold">
-              {new Date(obituary.janazah.datetime).toLocaleString(undefined, {
-                weekday: 'long',
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-                hour: 'numeric',
-                minute: '2-digit',
-              })}
-              {obituary.janazah.afterPrayer ? ` · ${obituary.janazah.afterPrayer}` : ''}
-            </p>
-            <p>{obituary.janazah.mosque}</p>
-            <p className="flex items-center gap-1 text-sm text-stone-500">
-              <MapPin className="h-4 w-4" /> {obituary.janazah.address}
-            </p>
-            {obituary.janazah.notes && <p className="text-sm text-stone-500">{obituary.janazah.notes}</p>}
+      <div className="th-surface overflow-hidden rounded-3xl shadow-sm">
+        {o.photoUrl && <img src={o.photoUrl} alt="" className="h-64 w-full object-cover object-top" />}
+        <div className="p-6 sm:p-8">
+          <div className="flex flex-wrap items-center gap-2">
+            {o.verified && (
+              <span className="rounded-full bg-emerald-700 px-2.5 py-0.5 text-xs font-semibold text-white">✓ {t('verified_badge')}</span>
+            )}
+            {o.kind === 'scholar' && (
+              <span className="th-primary rounded-full px-2.5 py-0.5 text-xs font-semibold">🎓 {t('notable_scholars')}</span>
+            )}
+            <span className="th-surface2 rounded-full px-2.5 py-0.5 text-xs font-semibold">{o.sect}</span>
           </div>
-          <div className="mt-4 flex flex-wrap gap-3">
-            <button
-              onClick={() => downloadJanazahIcs(obituary)}
-              className="flex items-center gap-2 rounded-full bg-emerald-900 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-800"
-            >
-              <CalendarPlus className="h-4 w-4" /> Add to calendar (.ics)
-            </button>
+          <h2 className="font-display mt-3 text-3xl font-bold">{o.name}</h2>
+          {o.arabicName && (
+            <p className="font-arabic mt-1 text-2xl opacity-80" dir="rtl" lang="ar">
+              {o.arabicName}
+            </p>
+          )}
+          <p className="th-muted mt-2">
+            {o.dateOfBirth && <>{formatDate(o.dateOfBirth)} — </>}
+            {formatDate(o.dateOfPassing)}
+            {o.hijriPassingDate && <> · <span className="font-arabic">{o.hijriPassingDate}</span></>}
+            {age !== undefined && <> · {t('age')} {age}</>}
+          </p>
+          <p className="th-muted">{locationLine(o)}</p>
+          <p className="font-arabic mt-4 text-xl" dir="rtl" lang="ar">
+            إِنَّا لِلَّهِ وَإِنَّا إِلَيْهِ رَاجِعُونَ
+          </p>
+
+          <button
+            onClick={() => onDua(o.id)}
+            disabled={duaGiven}
+            className="mt-5 w-full rounded-2xl bg-rose-700 px-4 py-3 font-semibold text-white transition hover:bg-rose-800 disabled:cursor-default disabled:bg-rose-300 sm:w-auto"
+          >
+            🤲 {duaGiven ? t('dua_offered_btn') : t('offer_dua')} · {o.duaCount.toLocaleString()} {t('duas_offered')}
+          </button>
+
+          <h3 className="mt-8 text-lg font-bold">{t('about')}</h3>
+          <p className="mt-2 leading-relaxed whitespace-pre-line">{o.biography}</p>
+
+          {(o.family || (o.familyMembers && o.familyMembers.length > 0)) && (
+            <>
+              <h3 className="mt-6 text-lg font-bold">{t('family')}</h3>
+              {o.family && <p className="mt-2 leading-relaxed">{o.family}</p>}
+              {o.familyMembers && o.familyMembers.length > 0 && (
+                <ul className="mt-2 list-inside list-disc space-y-1">
+                  {o.familyMembers.map((m) => (
+                    <li key={m}>{m}</li>
+                  ))}
+                </ul>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+
+      {o.janazah && (
+        <section className="th-surface mt-6 rounded-3xl p-6 shadow-sm sm:p-8">
+          <h3 className="text-lg font-bold">🕌 {t('janazah_prayer')}</h3>
+          <p className="mt-3">
+            <span className="font-semibold">{o.janazah.mosque}</span>
+            <br />
+            {o.janazah.address}
+          </p>
+          <p className="th-muted mt-1">
+            {formatDateTime(o.janazah.datetime)}
+            {o.janazah.afterPrayer ? ` · ${o.janazah.afterPrayer}` : ''}
+          </p>
+          {o.janazah.notes && <p className="mt-2 text-sm leading-relaxed">{o.janazah.notes}</p>}
+          {o.janazah.cemetery && (
+            <p className="mt-3 text-sm">
+              <span className="font-semibold">{t('burial_label')}:</span> {o.janazah.cemetery}
+              {o.janazah.cemeteryAddress ? ` — ${o.janazah.cemeteryAddress}` : ''}
+              {o.janazah.burialTime ? ` · ${o.janazah.burialTime}` : ''}
+            </p>
+          )}
+          <div className="mt-4 flex flex-wrap gap-2">
             <a
-              href={mapsUrl(`${obituary.janazah.mosque}, ${obituary.janazah.address}`)}
+              href={mapsUrl(`${o.janazah.mosque} ${o.janazah.address}`)}
               target="_blank"
               rel="noreferrer"
-              className="flex items-center gap-2 rounded-full border border-emerald-900/20 px-4 py-2 text-sm font-semibold text-emerald-900 hover:bg-emerald-50"
+              className="th-primary rounded-xl px-4 py-2 text-sm font-semibold transition hover:opacity-90"
             >
-              <Navigation className="h-4 w-4" /> Directions
+              🧭 {t('directions')}
             </a>
+            <button
+              onClick={() => downloadIcs(o, o.janazah!)}
+              className="th-surface2 th-border rounded-xl border px-4 py-2 text-sm font-semibold transition hover:opacity-80"
+            >
+              📅 {t('add_calendar')}
+            </button>
+            {o.janazah.cemeteryAddress && (
+              <a
+                href={mapsUrl(o.janazah.cemeteryAddress)}
+                target="_blank"
+                rel="noreferrer"
+                className="th-surface2 th-border rounded-xl border px-4 py-2 text-sm font-semibold transition hover:opacity-80"
+              >
+                🪦 {t('cemetery_label')} — {t('directions')}
+              </a>
+            )}
           </div>
-          {obituary.burial && (
-            <p className="mt-4 border-t border-stone-100 pt-3 text-sm text-stone-600">
-              <span className="font-semibold text-stone-800">Burial:</span> {obituary.burial.cemetery} —{' '}
-              {obituary.burial.address}
+        </section>
+      )}
+
+      {o.condolenceWindow && (
+        <section className="th-surface mt-6 rounded-3xl p-6 shadow-sm sm:p-8">
+          <h3 className="text-lg font-bold">
+            🤝 {t('condolence_window')}{' '}
+            <span className={`ml-1 rounded-full px-2 py-0.5 text-xs font-semibold text-white ${windowOpen ? 'bg-emerald-700' : 'bg-stone-500'}`}>
+              {windowOpen ? 'Open' : 'Closed'}
+            </span>
+          </h3>
+          <p className="mt-2">
+            {formatDate(o.condolenceWindow.startDate)} — {formatDate(o.condolenceWindow.endDate)}
+          </p>
+          {o.condolenceWindow.visitationAddress && (
+            <p className="th-muted mt-1 text-sm">
+              {t('visitation')}: {o.condolenceWindow.visitationAddress}
+              {o.condolenceWindow.visitationHours ? ` · ${o.condolenceWindow.visitationHours}` : ''}
             </p>
           )}
         </section>
       )}
 
-      {obituary.charity && (
-        <section className="mt-6 rounded-2xl border border-amber-600/20 bg-amber-50 p-6">
-          <h2 className="font-display text-lg font-semibold text-amber-900">Sadaqah Jariyah in their name</h2>
-          <p className="mt-1 text-stone-700">{obituary.charity.name}</p>
-          <div className="mt-3 h-3 overflow-hidden rounded-full bg-amber-200/60">
-            <div className="h-full rounded-full bg-amber-600" style={{ width: `${charityPct}%` }} />
+      {o.sadaqah && o.sadaqah.length > 0 && (
+        <section className="mt-6 rounded-3xl border border-amber-600/30 bg-amber-500/10 p-6 sm:p-8">
+          <h3 className="text-lg font-bold">💧 {t('sadaqah_title')}</h3>
+          <div className="mt-4 space-y-5">
+            {o.sadaqah.map((p) => {
+              const pct = Math.min(100, Math.round((p.raised / Math.max(1, p.goal)) * 100))
+              return (
+                <div key={p.id} className="th-surface rounded-2xl p-4">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="font-semibold">{p.title}</span>
+                    <span className="th-surface2 rounded-full px-2 py-0.5 text-[11px] font-semibold">{p.category}</span>
+                  </div>
+                  <p className="th-muted text-sm">{p.organization}</p>
+                  <p className="mt-1 text-sm leading-relaxed">{p.description}</p>
+                  <div className="th-surface2 mt-3 h-2.5 overflow-hidden rounded-full">
+                    <div className="h-full rounded-full bg-amber-500" style={{ width: `${pct}%` }} />
+                  </div>
+                  <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-sm font-semibold">
+                      {money(p.raised)} {t('raised_of')} {money(p.goal)} · {pct}%
+                      {pct >= 100 && <> · 🎉 {t('goal_reached')}</>}
+                    </p>
+                    {p.donationUrl && (
+                      <a
+                        href={p.donationUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="rounded-lg bg-amber-600 px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-amber-700"
+                      >
+                        {t('donate_btn')} →
+                      </a>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
           </div>
-          <p className="mt-2 text-sm font-medium text-amber-900">
-            ${obituary.charity.raised.toLocaleString()} raised of ${obituary.charity.goal.toLocaleString()} goal
-          </p>
         </section>
       )}
 
-      <section className="mt-6 rounded-2xl border border-emerald-950/10 bg-white p-6">
-        <h2 className="font-display text-lg font-semibold text-emerald-950">Memory Wall</h2>
-        <div className="mt-3 flex flex-wrap gap-2">
-          {DUA_TEMPLATES.map((t) => (
+      <section className="th-surface mt-6 rounded-3xl p-6 shadow-sm sm:p-8" id="memory-wall">
+        <h3 className="text-lg font-bold">🕯️ {t('memory_wall')}</h3>
+        <div className="mt-4 flex flex-wrap gap-2">
+          {DUA_TEMPLATES.map((tpl) => (
             <button
-              key={t}
-              onClick={() => setMessage(t)}
-              className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-900 hover:bg-emerald-100"
+              key={tpl.arabic}
+              onClick={() => {
+                setMessage(tpl.english)
+                setArabicDua(tpl.arabic)
+              }}
+              className="th-surface2 th-border rounded-full border px-3 py-1.5 text-xs transition hover:opacity-80"
+              title={tpl.transliteration}
             >
-              {t.slice(0, 42)}…
+              <span className="font-arabic text-sm">{tpl.arabic}</span>
             </button>
           ))}
         </div>
-        <form onSubmit={handleCondolence} className="mt-4 space-y-3">
-          <input
-            value={author}
-            onChange={(e) => setAuthor(e.target.value)}
-            placeholder="Your name"
-            className="w-full rounded-xl border border-stone-200 px-3 py-2 text-sm outline-none focus:border-emerald-700"
-          />
+        <form onSubmit={postWall} className="mt-4 grid gap-3">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <input
+              value={author}
+              onChange={(e) => setAuthor(e.target.value)}
+              placeholder={t('your_name')}
+              required
+              className="th-input rounded-xl px-3 py-2"
+            />
+            <input
+              value={relationship}
+              onChange={(e) => setRelationship(e.target.value)}
+              placeholder={t('relationship_ph')}
+              className="th-input rounded-xl px-3 py-2"
+            />
+          </div>
+          {arabicDua && (
+            <p className="font-arabic th-surface2 rounded-xl px-3 py-2 text-lg" dir="rtl" lang="ar">
+              {arabicDua}
+            </p>
+          )}
           <textarea
             value={message}
             onChange={(e) => setMessage(e.target.value)}
-            placeholder="Share a memory, a condolence, or a dua…"
+            placeholder={t('condolence_ph')}
+            required
             rows={3}
-            className="w-full rounded-xl border border-stone-200 px-3 py-2 text-sm outline-none focus:border-emerald-700"
+            className="th-input rounded-xl px-3 py-2"
           />
-          <button
-            type="submit"
-            className="flex items-center gap-2 rounded-full bg-emerald-900 px-5 py-2 text-sm font-semibold text-white hover:bg-emerald-800"
-          >
-            <Send className="h-4 w-4" /> Post to Memory Wall
+          <button className="th-primary justify-self-start rounded-xl px-5 py-2 font-semibold transition hover:opacity-90">
+            {t('post_wall')}
           </button>
         </form>
-
         <div className="mt-6 space-y-4">
-          {condolences.length === 0 && (
-            <p className="text-sm text-stone-500">No messages yet — be the first to leave a dua for the family.</p>
-          )}
-          {condolences.map((c) => (
-            <div key={c.id} className="rounded-xl bg-stone-50 p-4">
-              <p className="text-sm leading-relaxed text-stone-700">{c.message}</p>
-              <p className="mt-2 text-xs font-semibold text-stone-500">
-                {c.author} ·{' '}
-                {new Date(c.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
-              </p>
-            </div>
+          {wall.length === 0 && <p className="th-muted text-sm">{t('no_messages')}</p>}
+          {wall.map((c) => (
+            <article key={c.id} className="th-surface2 th-border rounded-2xl border p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <span className="font-semibold">{c.author}</span>
+                  {c.relationship && <span className="th-muted text-sm"> · {c.relationship}</span>}
+                  <span className="th-muted block text-xs">{new Date(c.createdAt).toLocaleString()}</span>
+                </div>
+                <button
+                  onClick={() => giveWallDua(c.id)}
+                  disabled={wallDuas.has(c.id)}
+                  className="shrink-0 rounded-full bg-rose-700 px-3 py-1 text-xs font-semibold text-white transition hover:bg-rose-800 disabled:bg-rose-300"
+                  title={t('offer_dua')}
+                >
+                  🤲 {c.duaCount}
+                </button>
+              </div>
+              {c.arabicDua && (
+                <p className="font-arabic mt-2 text-lg" dir="rtl" lang="ar">
+                  {c.arabicDua}
+                </p>
+              )}
+              <p className="mt-1 leading-relaxed whitespace-pre-line">{c.message}</p>
+            </article>
           ))}
         </div>
       </section>

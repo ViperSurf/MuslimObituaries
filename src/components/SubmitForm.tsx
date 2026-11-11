@@ -1,242 +1,301 @@
 import { useState } from 'react'
-import { ArrowLeft, ArrowRight, CheckCircle2 } from 'lucide-react'
-import type { Sect } from '../types'
-import { createObituary } from '../services/api'
+import type { ObituaryInput, SadaqahProject, Sect } from '../types'
+import * as api from '../services/api'
+import { ageFromDates } from '../lib/format'
+import { useSettings } from '../context/settings'
+import TipJar from './TipJar'
 
-const inputCls =
-  'w-full rounded-xl border border-stone-200 px-3 py-2 text-sm outline-none focus:border-emerald-700 bg-white'
-const labelCls = 'block text-xs font-semibold uppercase tracking-wide text-stone-500 mb-1'
+interface Props {
+  onDone: (id: string) => void
+}
 
-export default function SubmitForm({ onDone }: { onDone: (id: string) => void }) {
+const inputCls = 'th-input w-full rounded-xl px-3 py-2'
+const labelCls = 'grid gap-1 text-sm font-medium'
+
+export default function SubmitForm({ onDone }: Props) {
+  const { t } = useSettings()
   const [step, setStep] = useState(1)
-  const [tip, setTip] = useState(0)
-  const [form, setForm] = useState({
-    name: '',
-    arabicName: '',
-    age: '',
-    city: '',
-    state: '',
-    biography: '',
-    sect: 'Sunni' as Sect,
-    dateOfDeath: '',
-    mosque: '',
-    janazahAddress: '',
-    janazahDate: '',
-    janazahTime: '',
-    afterPrayer: '',
-    janazahNotes: '',
-    cemetery: '',
-    burialAddress: '',
-    family: '',
-    charityName: '',
-    charityGoal: '',
-  })
+  const [name, setName] = useState('')
+  const [arabicName, setArabicName] = useState('')
+  const [photoUrl, setPhotoUrl] = useState('')
+  const [dob, setDob] = useState('')
+  const [dod, setDod] = useState('')
+  const [city, setCity] = useState('')
+  const [stateName, setStateName] = useState('')
+  const [sect, setSect] = useState<Sect>('Sunni')
+  const [biography, setBiography] = useState('')
+  const [family, setFamily] = useState('')
+  const [familyMembers, setFamilyMembers] = useState('')
+  const [mosque, setMosque] = useState('')
+  const [address, setAddress] = useState('')
+  const [datetime, setDatetime] = useState('')
+  const [afterPrayer, setAfterPrayer] = useState('')
+  const [cemetery, setCemetery] = useState('')
+  const [cemeteryAddress, setCemeteryAddress] = useState('')
+  const [burialTime, setBurialTime] = useState('')
+  const [notes, setNotes] = useState('')
+  const [charityTitle, setCharityTitle] = useState('')
+  const [charityOrg, setCharityOrg] = useState('')
+  const [charityCategory, setCharityCategory] = useState<SadaqahProject['category']>('Water Well')
+  const [charityGoal, setCharityGoal] = useState('')
+  const [charityUrl, setCharityUrl] = useState('')
+  const [charityDesc, setCharityDesc] = useState('')
+  const [error, setError] = useState('')
 
-  const set = (key: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
-    setForm({ ...form, [key]: e.target.value })
+  const step1Valid = name.trim() && dod && city.trim() && biography.trim()
 
-  const canContinue =
-    step === 1 ? form.name.trim() && form.city.trim() && form.dateOfDeath : step === 2 ? form.mosque.trim() : true
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    const created = await createObituary({
-      name: form.name.trim(),
-      arabicName: form.arabicName.trim() || undefined,
-      age: form.age ? Number(form.age) : undefined,
-      city: form.city.trim(),
-      state: form.state.trim().toUpperCase() || '—',
-      biography: form.biography.trim(),
-      sect: form.sect,
-      dateOfDeath: form.dateOfDeath,
-      janazah: form.mosque.trim()
+  const publish = async () => {
+    setError('')
+    if (!step1Valid) {
+      setError('Name, date of passing, city and biography are required.')
+      setStep(1)
+      return
+    }
+    const input: ObituaryInput = {
+      name: name.trim(),
+      arabicName: arabicName.trim() || undefined,
+      photoUrl: photoUrl.trim() || undefined,
+      dateOfBirth: dob || undefined,
+      dateOfPassing: dod,
+      age: dob ? ageFromDates(dob, dod) : undefined,
+      city: city.trim(),
+      state: stateName.trim(),
+      biography: biography.trim(),
+      sect,
+      family: family.trim(),
+      familyMembers: familyMembers.split('\n').map((s) => s.trim()).filter(Boolean),
+      janazah: mosque.trim()
         ? {
-            mosque: form.mosque.trim(),
-            address: form.janazahAddress.trim(),
-            datetime: new Date(
-              `${form.janazahDate || form.dateOfDeath}T${form.janazahTime || '13:30'}`,
-            ).toISOString(),
-            afterPrayer: form.afterPrayer.trim() || undefined,
-            notes: form.janazahNotes.trim() || undefined,
+            mosque: mosque.trim(),
+            address: address.trim(),
+            datetime: datetime || new Date().toISOString(),
+            afterPrayer: afterPrayer.trim() || undefined,
+            notes: notes.trim() || undefined,
+            cemetery: cemetery.trim() || undefined,
+            cemeteryAddress: cemeteryAddress.trim() || undefined,
+            burialTime: burialTime.trim() || undefined,
           }
         : undefined,
-      burial: form.cemetery.trim()
-        ? { cemetery: form.cemetery.trim(), address: form.burialAddress.trim() }
+      sadaqah: charityTitle.trim()
+        ? [
+            {
+              id: `sj-${Date.now().toString(36)}`,
+              title: charityTitle.trim(),
+              organization: charityOrg.trim(),
+              category: charityCategory,
+              goal: Number(charityGoal) || 0,
+              raised: 0,
+              donationUrl: charityUrl.trim() || undefined,
+              description: charityDesc.trim(),
+            },
+          ]
         : undefined,
-      family: form.family.trim(),
-      charity: form.charityName.trim()
-        ? { name: form.charityName.trim(), goal: Number(form.charityGoal) || 1000, raised: 0 }
-        : undefined,
-    })
-    onDone(created.id)
+    }
+    const saved = await api.createObituary(input)
+    onDone(saved.id)
   }
+
+  const steps = ['step 1', 'step 2', 'step 3', 'step 4']
+  void steps
 
   return (
     <div className="mx-auto max-w-2xl">
-      <h1 className="font-display text-2xl font-bold text-emerald-950">Submit an obituary</h1>
-      <p className="mt-1 text-sm text-stone-600">
-        Free, always. Submissions appear immediately in this V1 demo — in production they would be
-        reviewed by a community admin before publishing.
-      </p>
-      <div className="mt-4 flex gap-2">
-        {[1, 2, 3].map((n) => (
-          <div key={n} className={`h-2 flex-1 rounded-full ${step >= n ? 'bg-emerald-800' : 'bg-stone-200'}`} />
+      <h2 className="font-display text-3xl font-bold">{t('submit_title')}</h2>
+      <p className="th-muted mt-2">{t('submit_sub')}</p>
+      <div className="mt-5 flex gap-1.5">
+        {[1, 2, 3, 4].map((s) => (
+          <div key={s} className={`h-1.5 flex-1 rounded-full ${s <= step ? 'bg-emerald-600' : 'th-surface2'}`} />
         ))}
       </div>
+      <p className="th-muted mt-2 text-sm font-medium">
+        Step {step} of 4: {step === 1 ? 'Deceased information' : step === 2 ? 'Janazah logistics' : step === 3 ? 'Sadaqah Jariyah' : 'Tip jar & publish'}
+      </p>
 
-      <form onSubmit={handleSubmit} className="mt-6 rounded-2xl border border-emerald-950/10 bg-white p-6">
+      <div className="th-surface mt-4 grid gap-3 rounded-3xl p-6 shadow-sm">
         {step === 1 && (
-          <div className="space-y-4">
-            <h2 className="font-display font-semibold text-emerald-950">Step 1 — The deceased</h2>
-            <div>
-              <label className={labelCls}>Full name *</label>
-              <input className={inputCls} value={form.name} onChange={set('name')} placeholder="e.g. Hajjah Maryam Abdullah" />
+          <>
+            <label className={labelCls}>
+              {t('f_name')} *
+              <input value={name} onChange={(e) => setName(e.target.value)} required className={inputCls} />
+            </label>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className={labelCls}>
+                {t('f_arabic')}
+                <input value={arabicName} onChange={(e) => setArabicName(e.target.value)} className={inputCls} dir="rtl" lang="ar" />
+              </label>
+              <label className={labelCls}>
+                {t('f_photo')}
+                <input value={photoUrl} onChange={(e) => setPhotoUrl(e.target.value)} placeholder="https://…" className={inputCls} />
+              </label>
+              <label className={labelCls}>
+                {t('f_dob')}
+                <input type="date" value={dob} onChange={(e) => setDob(e.target.value)} className={inputCls} />
+              </label>
+              <label className={labelCls}>
+                {t('f_dod')} *
+                <input type="date" value={dod} onChange={(e) => setDod(e.target.value)} required className={inputCls} />
+              </label>
+              <label className={labelCls}>
+                {t('f_city')} *
+                <input value={city} onChange={(e) => setCity(e.target.value)} required className={inputCls} />
+              </label>
+              <label className={labelCls}>
+                {t('f_state')}
+                <input value={stateName} onChange={(e) => setStateName(e.target.value)} className={inputCls} />
+              </label>
             </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <label className={labelCls}>Name in Arabic</label>
-                <input className={inputCls} value={form.arabicName} onChange={set('arabicName')} dir="rtl" />
-              </div>
-              <div>
-                <label className={labelCls}>Age</label>
-                <input className={inputCls} type="number" min={0} max={130} value={form.age} onChange={set('age')} />
-              </div>
-              <div>
-                <label className={labelCls}>City *</label>
-                <input className={inputCls} value={form.city} onChange={set('city')} />
-              </div>
-              <div>
-                <label className={labelCls}>State</label>
-                <input className={inputCls} value={form.state} onChange={set('state')} placeholder="IL" maxLength={2} />
-              </div>
-              <div>
-                <label className={labelCls}>Date of death *</label>
-                <input className={inputCls} type="date" value={form.dateOfDeath} onChange={set('dateOfDeath')} />
-              </div>
-              <div>
-                <label className={labelCls}>Tradition</label>
-                <select className={inputCls} value={form.sect} onChange={set('sect')}>
-                  <option>Sunni</option>
-                  <option>Shia</option>
-                  <option>Non-denominational</option>
-                </select>
-              </div>
-            </div>
-            <div>
-              <label className={labelCls}>Biography &amp; remembrance</label>
-              <textarea className={inputCls} rows={4} value={form.biography} onChange={set('biography')} placeholder="Their life, work, and what the community will remember…" />
-            </div>
-          </div>
+            <label className={labelCls}>
+              {t('f_sect')}
+              <select value={sect} onChange={(e) => setSect(e.target.value as Sect)} className={inputCls}>
+                <option>Sunni</option>
+                <option>Shia</option>
+                <option>Non-denominational</option>
+              </select>
+            </label>
+            <label className={labelCls}>
+              {t('f_bio')} *
+              <textarea value={biography} onChange={(e) => setBiography(e.target.value)} required rows={5} className={inputCls} />
+            </label>
+            <label className={labelCls}>
+              {t('f_family')}
+              <input value={family} onChange={(e) => setFamily(e.target.value)} className={inputCls} />
+            </label>
+            <label className={labelCls}>
+              Family members (one per line)
+              <textarea value={familyMembers} onChange={(e) => setFamilyMembers(e.target.value)} rows={3} className={inputCls} />
+            </label>
+          </>
         )}
 
         {step === 2 && (
-          <div className="space-y-4">
-            <h2 className="font-display font-semibold text-emerald-950">Step 2 — Janazah &amp; burial</h2>
-            <div>
-              <label className={labelCls}>Mosque / location *</label>
-              <input className={inputCls} value={form.mosque} onChange={set('mosque')} placeholder="e.g. Central Illinois Mosque & Islamic Center (CIMIC)" />
+          <>
+            <label className={labelCls}>
+              {t('f_mosque')}
+              <input value={mosque} onChange={(e) => setMosque(e.target.value)} className={inputCls} />
+            </label>
+            <label className={labelCls}>
+              {t('f_address')}
+              <input value={address} onChange={(e) => setAddress(e.target.value)} className={inputCls} />
+            </label>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className={labelCls}>
+                {t('f_datetime')}
+                <input type="datetime-local" value={datetime} onChange={(e) => setDatetime(e.target.value)} className={inputCls} />
+              </label>
+              <label className={labelCls}>
+                {t('f_after')}
+                <input value={afterPrayer} onChange={(e) => setAfterPrayer(e.target.value)} placeholder="After Dhuhr" className={inputCls} />
+              </label>
+              <label className={labelCls}>
+                {t('f_cemetery')}
+                <input value={cemetery} onChange={(e) => setCemetery(e.target.value)} className={inputCls} />
+              </label>
+              <label className={labelCls}>
+                {t('cemetery_label')} {t('f_address')}
+                <input value={cemeteryAddress} onChange={(e) => setCemeteryAddress(e.target.value)} className={inputCls} />
+              </label>
+              <label className={labelCls}>
+                {t('burial_label')}
+                <input value={burialTime} onChange={(e) => setBurialTime(e.target.value)} placeholder="Immediately after Janazah" className={inputCls} />
+              </label>
             </div>
-            <div>
-              <label className={labelCls}>Address</label>
-              <input className={inputCls} value={form.janazahAddress} onChange={set('janazahAddress')} />
-            </div>
-            <div className="grid gap-4 sm:grid-cols-3">
-              <div>
-                <label className={labelCls}>Janazah date</label>
-                <input className={inputCls} type="date" value={form.janazahDate} onChange={set('janazahDate')} />
-              </div>
-              <div>
-                <label className={labelCls}>Time</label>
-                <input className={inputCls} type="time" value={form.janazahTime} onChange={set('janazahTime')} />
-              </div>
-              <div>
-                <label className={labelCls}>Or after prayer</label>
-                <input className={inputCls} value={form.afterPrayer} onChange={set('afterPrayer')} placeholder="After Dhuhr" />
-              </div>
-            </div>
-            <div>
-              <label className={labelCls}>Special instructions</label>
-              <input className={inputCls} value={form.janazahNotes} onChange={set('janazahNotes')} placeholder="Parking, Ghusl arrangements, Azza details…" />
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <label className={labelCls}>Cemetery</label>
-                <input className={inputCls} value={form.cemetery} onChange={set('cemetery')} />
-              </div>
-              <div>
-                <label className={labelCls}>Cemetery address</label>
-                <input className={inputCls} value={form.burialAddress} onChange={set('burialAddress')} />
-              </div>
-            </div>
-          </div>
+            <label className={labelCls}>
+              {t('f_notes')}
+              <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} className={inputCls} />
+            </label>
+          </>
         )}
 
         {step === 3 && (
-          <div className="space-y-4">
-            <h2 className="font-display font-semibold text-emerald-950">Step 3 — Family &amp; charity</h2>
-            <div>
-              <label className={labelCls}>Surviving family</label>
-              <textarea className={inputCls} rows={2} value={form.family} onChange={set('family')} placeholder="Survived by…" />
+          <>
+            <label className={labelCls}>
+              {t('f_charity_title')}
+              <input value={charityTitle} onChange={(e) => setCharityTitle(e.target.value)} className={inputCls} />
+            </label>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className={labelCls}>
+                {t('f_charity_org')}
+                <input value={charityOrg} onChange={(e) => setCharityOrg(e.target.value)} className={inputCls} />
+              </label>
+              <label className={labelCls}>
+                Category
+                <select value={charityCategory} onChange={(e) => setCharityCategory(e.target.value as SadaqahProject['category'])} className={inputCls}>
+                  <option>Water Well</option>
+                  <option>Mosque Construction</option>
+                  <option>Orphan Care</option>
+                  <option>Quran Distribution</option>
+                  <option>Medical Relief</option>
+                  <option>Other</option>
+                </select>
+              </label>
+              <label className={labelCls}>
+                {t('f_charity_goal')}
+                <input type="number" min={0} value={charityGoal} onChange={(e) => setCharityGoal(e.target.value)} className={inputCls} />
+              </label>
+              <label className={labelCls}>
+                Donation URL
+                <input value={charityUrl} onChange={(e) => setCharityUrl(e.target.value)} placeholder="https://…" className={inputCls} />
+              </label>
             </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <label className={labelCls}>Sadaqah Jariyah cause (optional)</label>
-                <input className={inputCls} value={form.charityName} onChange={set('charityName')} placeholder="e.g. Water well in their name" />
-              </div>
-              <div>
-                <label className={labelCls}>Goal ($)</label>
-                <input className={inputCls} type="number" min={0} value={form.charityGoal} onChange={set('charityGoal')} />
-              </div>
-            </div>
-            <div>
-              <label className={labelCls}>Support Al-Baqaa (optional tip — keeps hosting free for grieving families)</label>
-              <div className="flex gap-2">
-                {[0, 5, 10, 25].map((amount) => (
-                  <button
-                    key={amount}
-                    type="button"
-                    onClick={() => setTip(amount)}
-                    className={`rounded-full px-4 py-1.5 text-sm font-semibold ${
-                      tip === amount ? 'bg-amber-500 text-white' : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
-                    }`}
-                  >
-                    ${amount}
-                  </button>
-                ))}
-              </div>
-              <p className="mt-1 text-xs text-stone-400">Demo only — no payment is processed in V1.</p>
-            </div>
-          </div>
+            <label className={labelCls}>
+              Description
+              <textarea value={charityDesc} onChange={(e) => setCharityDesc(e.target.value)} rows={3} className={inputCls} />
+            </label>
+          </>
         )}
 
-        <div className="mt-6 flex justify-between">
-          <button
-            type="button"
-            disabled={step === 1}
-            onClick={() => setStep(step - 1)}
-            className="flex items-center gap-1 rounded-full px-4 py-2 text-sm font-semibold text-stone-500 disabled:opacity-30"
-          >
-            <ArrowLeft className="h-4 w-4" /> Back
-          </button>
-          {step < 3 ? (
-            <button
-              type="button"
-              disabled={!canContinue}
-              onClick={() => setStep(step + 1)}
-              className="flex items-center gap-1 rounded-full bg-emerald-900 px-5 py-2 text-sm font-semibold text-white disabled:opacity-40"
-            >
-              Continue <ArrowRight className="h-4 w-4" />
+        {step === 4 && (
+          <>
+            <div className="th-surface2 th-border rounded-2xl border p-4 text-sm leading-relaxed">
+              <strong>{name || '—'}</strong>
+              {dod && <> · {t('passed')}: {dod}</>}
+              {city && (
+                <>
+                  <br />
+                  {city}
+                  {stateName ? `, ${stateName}` : ''}
+                </>
+              )}
+              {mosque && (
+                <>
+                  <br />
+                  {t('janazah_prayer')}: {mosque}
+                  {datetime ? ` · ${new Date(datetime).toLocaleString()}` : ''}
+                </>
+              )}
+              {charityTitle && (
+                <>
+                  <br />
+                  {t('sadaqah_title')}: {charityTitle}
+                </>
+              )}
+            </div>
+            <TipJar />
+            {error && <p className="font-medium text-rose-700">{error}</p>}
+            <button onClick={publish} className="th-primary rounded-xl px-5 py-3 font-semibold transition hover:opacity-90">
+              {t('publish')}
             </button>
-          ) : (
+          </>
+        )}
+
+        <div className="mt-2 flex justify-between">
+          <button
+            onClick={() => setStep((s) => Math.max(1, s - 1))}
+            disabled={step === 1}
+            className="th-surface2 th-border rounded-xl border px-4 py-2 text-sm font-semibold disabled:opacity-40"
+          >
+            ← {t('back')}
+          </button>
+          {step < 4 && (
             <button
-              type="submit"
-              className="flex items-center gap-2 rounded-full bg-emerald-900 px-5 py-2 text-sm font-semibold text-white hover:bg-emerald-800"
+              onClick={() => setStep((s) => Math.min(4, s + 1))}
+              className="th-primary rounded-xl px-4 py-2 text-sm font-semibold transition hover:opacity-90"
             >
-              <CheckCircle2 className="h-4 w-4" /> Publish obituary
+              {t('continue')} →
             </button>
           )}
         </div>
-      </form>
+      </div>
     </div>
   )
 }

@@ -1,10 +1,15 @@
-import { useEffect, useMemo, useState } from 'react'
-import { Bell, Building2, MoonStar, PenLine, Search } from 'lucide-react'
-import type { Obituary, Sect, Vendor, VendorCategory } from './types'
-import { listObituaries, listVendors, subscribeAlerts } from './services/api'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import type { Obituary, Sect } from './types'
+import * as api from './services/api'
 import ObituaryCard from './components/ObituaryCard'
 import DetailView from './components/DetailView'
 import SubmitForm from './components/SubmitForm'
+import VendorDirectory from './components/VendorDirectory'
+import AlertsForm from './components/AlertsForm'
+import AdminView from './components/AdminView'
+import ChangelogView from './components/ChangelogView'
+import { LANGS } from './i18n'
+import { THEMES, useSettings, type Theme } from './context/settings'
 
 type Route =
   | { name: 'home' }
@@ -12,15 +17,17 @@ type Route =
   | { name: 'submit' }
   | { name: 'vendors' }
   | { name: 'alerts' }
+  | { name: 'admin' }
+  | { name: 'changelog' }
 
-function parseHash(): Route {
-  const hash = window.location.hash.replace(/^#/, '') || '/'
-  if (hash === '/' || hash === '') return { name: 'home' }
-  if (hash === '/submit') return { name: 'submit' }
-  if (hash === '/vendors') return { name: 'vendors' }
-  if (hash === '/alerts') return { name: 'alerts' }
-  const m = hash.match(/^\/obituary\/(.+)$/)
-  if (m) return { name: 'detail', id: decodeURIComponent(m[1]) }
+function parseRoute(): Route {
+  const h = window.location.hash.replace(/^#/, '')
+  if (h.startsWith('/obituary/')) return { name: 'detail', id: decodeURIComponent(h.slice('/obituary/'.length)) }
+  if (h === '/submit') return { name: 'submit' }
+  if (h === '/vendors') return { name: 'vendors' }
+  if (h === '/alerts') return { name: 'alerts' }
+  if (h === '/admin') return { name: 'admin' }
+  if (h === '/changelog') return { name: 'changelog' }
   return { name: 'home' }
 }
 
@@ -29,299 +36,291 @@ function go(path: string) {
 }
 
 export default function App() {
-  const [route, setRoute] = useState<Route>(() => parseHash())
+  const { t, lang, setLang, theme, setTheme } = useSettings()
+  const [route, setRoute] = useState<Route>(() => parseRoute())
+  const [dataVersion, setDataVersion] = useState(0)
+
+  const [community, setCommunity] = useState<Obituary[]>([])
+  const [scholars, setScholars] = useState<Obituary[]>([])
+  const [regions, setRegions] = useState<string[]>([])
+  const [years, setYears] = useState<string[]>([])
+  const [loading, setLoading] = useState(true)
+  const [selected, setSelected] = useState<Obituary | null>(null)
+  const [duaGiven, setDuaGiven] = useState<Set<string>>(new Set())
+
+  const [q, setQ] = useState('')
+  const [region, setRegion] = useState('')
+  const [sect, setSect] = useState<Sect | ''>('')
+  const [year, setYear] = useState('')
+  const [janazahMode, setJanazahMode] = useState<'any' | 'upcoming' | 'today'>('any')
+  const [scholarsOnly, setScholarsOnly] = useState(false)
 
   useEffect(() => {
-    const onChange = () => {
-      setRoute(parseHash())
-      window.scrollTo({ top: 0 })
-    }
-    window.addEventListener('hashchange', onChange)
-    return () => window.removeEventListener('hashchange', onChange)
+    const onHash = () => setRoute(parseRoute())
+    window.addEventListener('hashchange', onHash)
+    return () => window.removeEventListener('hashchange', onHash)
   }, [])
+
+  const refreshHome = useCallback(async () => {
+    setLoading(true)
+    const [c, s, r, y] = await Promise.all([
+      api.listObituaries({ kind: 'community' }),
+      api.listObituaries({ kind: 'scholar' }),
+      api.listRegions(),
+      api.listYears(),
+    ])
+    setCommunity(c)
+    setScholars(s)
+    setRegions(r)
+    setYears(y)
+    setLoading(false)
+  }, [])
+
+  useEffect(() => {
+    void refreshHome()
+  }, [refreshHome, dataVersion])
+
+  useEffect(() => {
+    if (route.name !== 'detail') return
+    let live = true
+    api.getObituary(route.id).then((o) => {
+      if (live) setSelected(o)
+    })
+    return () => {
+      live = false
+    }
+  }, [route, dataVersion])
+
+  const filteredCommunity = useMemo(() => {
+    let list = community
+    if (q) {
+      const needle = q.toLowerCase()
+      list = list.filter(
+        (o) =>
+          o.name.toLowerCase().includes(needle) ||
+          (o.arabicName ?? '').toLowerCase().includes(needle) ||
+          o.city.toLowerCase().includes(needle) ||
+          o.biography.toLowerCase().includes(needle) ||
+          (o.janazah?.mosque ?? '').toLowerCase().includes(needle),
+      )
+    }
+    if (region) list = list.filter((o) => `${o.city}, ${o.state}`.includes(region) || o.city === region)
+    if (sect) list = list.filter((o) => o.sect === sect)
+    if (year) list = list.filter((o) => o.dateOfPassing.startsWith(year))
+    if (janazahMode === 'upcoming') list = list.filter((o) => o.janazah && new Date(o.janazah.datetime) >= new Date())
+    if (janazahMode === 'today')
+      list = list.filter((o) => o.janazah && new Date(o.janazah.datetime).toDateString() === new Date().toDateString())
+    return list
+  }, [community, q, region, sect, year, janazahMode])
+
+  const filteredScholars = useMemo(() => {
+    let list = scholars
+    if (q) {
+      const needle = q.toLowerCase()
+      list = list.filter((o) => o.name.toLowerCase().includes(needle) || o.biography.toLowerCase().includes(needle))
+    }
+    if (sect) list = list.filter((o) => o.sect === sect)
+    if (year) list = list.filter((o) => o.dateOfPassing.startsWith(year))
+    return list
+  }, [scholars, q, sect, year])
+
+  const giveDua = async (id: string) => {
+    if (duaGiven.has(id)) return
+    const count = await api.incrementDua(id)
+    setDuaGiven((prev) => new Set(prev).add(id))
+    setCommunity((prev) => prev.map((o) => (o.id === id ? { ...o, duaCount: count } : o)))
+    setScholars((prev) => prev.map((o) => (o.id === id ? { ...o, duaCount: count } : o)))
+    setSelected((prev) => (prev && prev.id === id ? { ...prev, duaCount: count } : prev))
+  }
+
+  const navLink = (label: string, path: string, active: boolean) => (
+    <button
+      key={path}
+      onClick={() => go(path)}
+      className={`rounded-full px-3 py-1.5 text-sm font-semibold transition ${active ? 'bg-white/15 underline underline-offset-4' : 'hover:bg-white/10'}`}
+      style={theme === 'white' ? { color: 'inherit' } : undefined}
+    >
+      {label}
+    </button>
+  )
 
   return (
     <div className="flex min-h-screen flex-col">
-      <header className="bg-emerald-950 text-emerald-50">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-4">
-          <button onClick={() => go('/')} className="flex items-center gap-2 text-left">
-            <MoonStar className="h-7 w-7 text-amber-300" />
+      <header className="th-header sticky top-0 z-10 shadow-md">
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3">
+          <button onClick={() => go('/')} className="flex items-center gap-3 text-start">
+            <img src="favicon.svg" alt="" className="h-10 w-10" />
             <span>
-              <span className="font-display block text-xl font-bold leading-none">
-                Al-Baqaa <span className="font-arabic font-normal">البقاء</span>
+              <span className="font-display block text-xl leading-tight font-bold">
+                Al-Baqaa <span className="font-arabic">البقاء</span>
               </span>
-              <span className="text-xs text-emerald-300">Muslim Obituaries &amp; Janazah Announcements</span>
+              <span className="block text-xs opacity-80">{t('tagline')}</span>
             </span>
           </button>
-          <nav className="flex flex-wrap items-center gap-2 text-sm font-semibold">
-            <button onClick={() => go('/')} className="rounded-full px-3 py-1.5 hover:bg-emerald-900">
-              Obituaries
-            </button>
-            <button
-              onClick={() => go('/vendors')}
-              className="flex items-center gap-1 rounded-full px-3 py-1.5 hover:bg-emerald-900"
-            >
-              <Building2 className="h-4 w-4" /> Funeral Services
-            </button>
-            <button
-              onClick={() => go('/alerts')}
-              className="flex items-center gap-1 rounded-full px-3 py-1.5 hover:bg-emerald-900"
-            >
-              <Bell className="h-4 w-4" /> Janazah Alerts
-            </button>
+          <nav className="ms-auto flex flex-wrap items-center gap-1">
+            {navLink(t('nav_obituaries'), '/', route.name === 'home' || route.name === 'detail')}
+            {navLink(t('nav_vendors'), '/vendors', route.name === 'vendors')}
+            {navLink(t('nav_alerts'), '/alerts', route.name === 'alerts')}
+            {navLink(t('nav_changelog'), '/changelog', route.name === 'changelog')}
+            {navLink(t('nav_admin'), '/admin', route.name === 'admin')}
             <button
               onClick={() => go('/submit')}
-              className="flex items-center gap-1 rounded-full bg-amber-500 px-4 py-1.5 text-emerald-950 hover:bg-amber-400"
+              className="ms-1 rounded-full bg-amber-500 px-4 py-1.5 text-sm font-bold text-emerald-950 transition hover:bg-amber-400"
             >
-              <PenLine className="h-4 w-4" /> Submit Obituary
+              {t('nav_submit')}
             </button>
+            <select
+              aria-label={t('language')}
+              value={lang}
+              onChange={(e) => setLang(e.target.value as typeof lang)}
+              className="th-input ms-2 rounded-lg px-2 py-1.5 text-sm"
+            >
+              {LANGS.map((l) => (
+                <option key={l.code} value={l.code}>
+                  {l.label}
+                </option>
+              ))}
+            </select>
+            <select
+              aria-label={t('theme')}
+              value={theme}
+              onChange={(e) => setTheme(e.target.value as Theme)}
+              className="th-input rounded-lg px-2 py-1.5 text-sm"
+            >
+              {THEMES.map((th) => (
+                <option key={th} value={th}>
+                  {th === 'emerald' ? `🟢 ${t('theme_emerald')}` : th === 'white' ? `⚪ ${t('theme_white')}` : `⚫ ${t('theme_black')}`}
+                </option>
+              ))}
+            </select>
           </nav>
         </div>
       </header>
 
       <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8">
-        {route.name === 'home' && <HomeView onOpen={(id) => go(`/obituary/${id}`)} />}
-        {route.name === 'detail' && (
-          <DetailView id={route.id} onBack={() => go('/')} />
+        {route.name === 'home' && (
+          <>
+            <section className="th-hero rounded-3xl p-6 shadow-sm sm:p-10">
+              <h1 className="font-display text-3xl font-bold sm:text-4xl">{t('hero_title')}</h1>
+              <p className="mt-3 max-w-3xl leading-relaxed opacity-90">{t('hero_sub')}</p>
+              <div className="mt-6 grid gap-3 md:grid-cols-2">
+                <input
+                  value={q}
+                  onChange={(e) => setQ(e.target.value)}
+                  placeholder={t('search_ph')}
+                  className="th-input rounded-xl px-4 py-2.5"
+                />
+                <select value={region} onChange={(e) => setRegion(e.target.value)} className="th-input rounded-xl px-4 py-2.5">
+                  <option value="">{t('city_ph')}</option>
+                  {regions.map((r) => (
+                    <option key={r} value={r}>
+                      {r}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <select value={sect} onChange={(e) => setSect(e.target.value as Sect | '')} className="th-input rounded-xl px-3 py-2 text-sm">
+                  <option value="">{t('all_traditions')}</option>
+                  <option value="Sunni">Sunni</option>
+                  <option value="Shia">Shia</option>
+                  <option value="Non-denominational">Non-denominational</option>
+                </select>
+                <select value={year} onChange={(e) => setYear(e.target.value)} className="th-input rounded-xl px-3 py-2 text-sm">
+                  <option value="">{t('all_years')}</option>
+                  {years.map((y) => (
+                    <option key={y} value={y}>
+                      {y}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  onClick={() => setJanazahMode(janazahMode === 'upcoming' ? 'any' : 'upcoming')}
+                  className={`rounded-xl px-3 py-2 text-sm font-semibold ${janazahMode === 'upcoming' ? 'bg-rose-700 text-white' : 'th-input'}`}
+                >
+                  🕌 {t('upcoming_only')}
+                </button>
+                <button
+                  onClick={() => setJanazahMode(janazahMode === 'today' ? 'any' : 'today')}
+                  className={`rounded-xl px-3 py-2 text-sm font-semibold ${janazahMode === 'today' ? 'bg-rose-700 text-white' : 'th-input'}`}
+                >
+                  📅 {t('today_only')}
+                </button>
+                <button
+                  onClick={() => setScholarsOnly(!scholarsOnly)}
+                  className={`rounded-xl px-3 py-2 text-sm font-semibold ${scholarsOnly ? 'bg-amber-500 text-emerald-950' : 'th-input'}`}
+                >
+                  🎓 {t('scholars_only')}
+                </button>
+              </div>
+            </section>
+
+            {loading ? (
+              <p className="th-muted mt-10 text-center">{t('loading')}</p>
+            ) : (
+              <>
+                {!scholarsOnly && (
+                  <>
+                    <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                      {filteredCommunity.map((o) => (
+                        <ObituaryCard key={o.id} obituary={o} onOpen={(id) => go(`/obituary/${id}`)} onQuickDua={giveDua} duaGiven={duaGiven.has(o.id)} />
+                      ))}
+                    </div>
+                    {filteredCommunity.length === 0 && <p className="th-muted mt-8 text-center">{t('no_results')}</p>}
+                  </>
+                )}
+                {(scholarsOnly || (!q && !sect && !year)) && filteredScholars.length > 0 && (
+                  <section className="mt-12">
+                    <h2 className="font-display text-2xl font-bold">🎓 {t('notable_scholars')}</h2>
+                    <div className="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                      {filteredScholars.map((o) => (
+                        <ObituaryCard key={o.id} obituary={o} onOpen={(id) => go(`/obituary/${id}`)} onQuickDua={giveDua} duaGiven={duaGiven.has(o.id)} />
+                      ))}
+                    </div>
+                  </section>
+                )}
+                {scholarsOnly && filteredScholars.length === 0 && <p className="th-muted mt-8 text-center">{t('no_results')}</p>}
+              </>
+            )}
+          </>
         )}
+
+        {route.name === 'detail' &&
+          (selected ? (
+            <DetailView obituary={selected} onBack={() => go('/')} onDua={giveDua} duaGiven={duaGiven.has(selected.id)} />
+          ) : (
+            <p className="th-muted text-center">{t('loading')}</p>
+          ))}
+
         {route.name === 'submit' && <SubmitForm onDone={(id) => go(`/obituary/${id}`)} />}
-        {route.name === 'vendors' && <VendorsView />}
-        {route.name === 'alerts' && <AlertsView />}
+        {route.name === 'vendors' && <VendorDirectory />}
+        {route.name === 'alerts' && <AlertsForm />}
+        {route.name === 'admin' && <AdminView onDataChanged={() => setDataVersion((v) => v + 1)} />}
+        {route.name === 'changelog' && <ChangelogView />}
       </main>
 
-      <footer className="border-t border-emerald-950/10 bg-white/60">
-        <div className="mx-auto max-w-6xl px-4 py-6 text-center text-sm text-stone-500">
-          <p className="font-arabic text-lg text-emerald-900">كُلُّ نَفْسٍ ذَائِقَةُ الْمَوْتِ</p>
-          <p className="mt-1 italic">&ldquo;Every soul shall taste death.&rdquo; — Surah Ali &lsquo;Imran 3:185</p>
-          <p className="mt-3">
-            Al-Baqaa is a free, open-source community platform, built Fi Sabilillah. API spec:{' '}
-            <a className="font-semibold text-emerald-900 underline" href="./api/v1/openapi.json" target="_blank" rel="noreferrer">
-              /api/v1/openapi.json
+      <footer className="th-header mt-4">
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-6 gap-y-2 px-4 py-5 text-sm">
+          <span className="font-arabic text-base" dir="rtl" lang="ar">
+            إِنَّا لِلَّهِ وَإِنَّا إِلَيْهِ رَاجِعُونَ
+          </span>
+          <span className="opacity-80">Al-Baqaa V2.0 · Free for families, always · Built by Bara Zalloum (ViperSurf)</span>
+          <span className="ms-auto flex flex-wrap gap-4">
+            <a className="underline" href="data/database.json" target="_blank" rel="noreferrer">
+              {t('database_link')}
             </a>
-          </p>
+            <a className="underline" href="api/v1/openapi.json" target="_blank" rel="noreferrer">
+              API (OpenAPI)
+            </a>
+            <button className="underline" onClick={() => go('/changelog')}>
+              {t('nav_changelog')}
+            </button>
+            <a className="underline" href="https://github.com/ViperSurf/MuslimObituaries" target="_blank" rel="noreferrer">
+              GitHub
+            </a>
+          </span>
         </div>
       </footer>
-    </div>
-  )
-}
-
-function HomeView({ onOpen }: { onOpen: (id: string) => void }) {
-  const [obituaries, setObituaries] = useState<Obituary[]>([])
-  const [q, setQ] = useState('')
-  const [city, setCity] = useState('')
-  const [sect, setSect] = useState<Sect | ''>('')
-  const [upcomingOnly, setUpcomingOnly] = useState(false)
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    let active = true
-    ;(async () => {
-      const list = await listObituaries({
-        q,
-        city,
-        sect,
-        janazah: upcomingOnly ? 'upcoming' : 'any',
-      })
-      if (!active) return
-      setObituaries(list)
-      setLoading(false)
-    })()
-    return () => {
-      active = false
-    }
-  }, [q, city, sect, upcomingOnly])
-
-  const upcomingCount = useMemo(
-    () => obituaries.filter((o) => o.janazah && new Date(o.janazah.datetime).getTime() >= Date.now()).length,
-    [obituaries],
-  )
-
-  return (
-    <div>
-      <div className="rounded-3xl bg-emerald-950 px-6 py-10 text-center text-emerald-50">
-        <p className="font-arabic text-3xl leading-relaxed text-amber-200">إِنَّا لِلَّهِ وَإِنَّا إِلَيْهِ رَاجِعُونَ</p>
-        <h1 className="font-display mx-auto mt-4 max-w-2xl text-3xl font-bold sm:text-4xl">
-          Honouring those who returned to their Lord
-        </h1>
-        <p className="mx-auto mt-3 max-w-xl text-sm leading-relaxed text-emerald-200">
-          Janazah announcements, funeral logistics, a Memory Wall for condolences and duas, and
-          Sadaqah Jariyah in their name — free for every family, forever.
-        </p>
-        {upcomingCount > 0 && (
-          <p className="mt-4 inline-block rounded-full bg-amber-500/15 px-4 py-1 text-sm font-semibold text-amber-300">
-            {upcomingCount} upcoming Janazah prayer{upcomingCount === 1 ? '' : 's'} listed
-          </p>
-        )}
-      </div>
-
-      <div className="mt-6 flex flex-wrap items-center gap-3 rounded-2xl border border-emerald-950/10 bg-white p-4">
-        <label className="flex min-w-52 flex-1 items-center gap-2 rounded-xl bg-stone-100 px-3 py-2">
-          <Search className="h-4 w-4 text-stone-400" />
-          <input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="Search by name…"
-            className="w-full bg-transparent text-sm outline-none"
-          />
-        </label>
-        <input
-          value={city}
-          onChange={(e) => setCity(e.target.value)}
-          placeholder="City"
-          className="w-32 rounded-xl bg-stone-100 px-3 py-2 text-sm outline-none"
-        />
-        <select
-          value={sect}
-          onChange={(e) => setSect(e.target.value as Sect | '')}
-          className="rounded-xl bg-stone-100 px-3 py-2 text-sm outline-none"
-        >
-          <option value="">All traditions</option>
-          <option value="Sunni">Sunni</option>
-          <option value="Shia">Shia</option>
-          <option value="Non-denominational">Non-denominational</option>
-        </select>
-        <label className="flex cursor-pointer items-center gap-2 text-sm font-medium text-stone-600">
-          <input
-            type="checkbox"
-            checked={upcomingOnly}
-            onChange={(e) => setUpcomingOnly(e.target.checked)}
-            className="h-4 w-4 accent-emerald-800"
-          />
-          Upcoming Janazah only
-        </label>
-      </div>
-
-      {loading ? (
-        <p className="py-16 text-center text-stone-500">Loading obituaries…</p>
-      ) : obituaries.length === 0 ? (
-        <p className="py-16 text-center text-stone-500">
-          No obituaries match your filters. May Allah bless the deceased of this community.
-        </p>
-      ) : (
-        <div className="mt-6 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-          {obituaries.map((o) => (
-            <ObituaryCard key={o.id} obituary={o} onOpen={onOpen} />
-          ))}
-        </div>
-      )}
-    </div>
-  )
-}
-
-const VENDOR_CATEGORIES: Array<VendorCategory | ''> = [
-  '',
-  'Funeral Home',
-  'Mosque / Ghusl',
-  'Cemetery',
-  'Legal / Wasiyyah',
-]
-
-function VendorsView() {
-  const [category, setCategory] = useState<VendorCategory | ''>('')
-  const [vendors, setVendors] = useState<Vendor[]>([])
-
-  useEffect(() => {
-    let active = true
-    ;(async () => {
-      const list = await listVendors(category)
-      if (active) setVendors(list)
-    })()
-    return () => {
-      active = false
-    }
-  }, [category])
-
-  return (
-    <div className="mx-auto max-w-4xl">
-      <h1 className="font-display text-2xl font-bold text-emerald-950">Funeral services directory</h1>
-      <p className="mt-1 text-sm text-stone-600">
-        Verified Muslim funeral homes, mosques with Ghusl facilities, cemeteries, and Wasiyyah
-        advisors. Listings marked &ldquo;sample&rdquo; are placeholders pending verification.
-      </p>
-      <div className="mt-4 flex flex-wrap gap-2">
-        {VENDOR_CATEGORIES.map((c) => (
-          <button
-            key={c || 'all'}
-            onClick={() => setCategory(c)}
-            className={`rounded-full px-4 py-1.5 text-sm font-semibold ${
-              category === c ? 'bg-emerald-900 text-white' : 'bg-white text-stone-600 border border-stone-200'
-            }`}
-          >
-            {c || 'All'}
-          </button>
-        ))}
-      </div>
-      <div className="mt-5 grid gap-4 sm:grid-cols-2">
-        {vendors.map((v) => (
-          <div key={v.id} className="rounded-2xl border border-emerald-950/10 bg-white p-5">
-            <p className="text-xs font-bold uppercase tracking-wide text-amber-600">{v.category}</p>
-            <h3 className="font-display mt-1 font-semibold text-emerald-950">{v.name}</h3>
-            <p className="mt-1 text-sm text-stone-500">
-              {v.city}, {v.state} · {v.phone}
-            </p>
-            <p className="text-sm text-stone-500">{v.address}</p>
-            <p className="mt-2 text-sm leading-relaxed text-stone-600">{v.notes}</p>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
-
-function AlertsView() {
-  const [email, setEmail] = useState('')
-  const [phone, setPhone] = useState('')
-  const [city, setCity] = useState('')
-  const [radius, setRadius] = useState(25)
-  const [done, setDone] = useState(false)
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!email.trim() || !city.trim()) return
-    await subscribeAlerts({ email: email.trim(), phone: phone.trim() || undefined, city: city.trim(), radiusMiles: radius })
-    setDone(true)
-  }
-
-  return (
-    <div className="mx-auto max-w-xl">
-      <h1 className="font-display text-2xl font-bold text-emerald-950">Janazah alerts</h1>
-      <p className="mt-1 text-sm leading-relaxed text-stone-600">
-        Attending a Janazah is a communal obligation (Fard Kifayah) and a great reward. Subscribe
-        to be notified when a Janazah is announced near you. V1 stores your subscription locally;
-        V2 will send real email/SMS alerts.
-      </p>
-      {done ? (
-        <div className="mt-6 rounded-2xl bg-emerald-900 p-6 text-center text-emerald-50">
-          <p className="font-display text-lg font-semibold">Subscribed — Jazakum Allahu khayran</p>
-          <p className="mt-1 text-sm text-emerald-200">
-            You&apos;ll be alerted for Janazah prayers within {radius} miles of {city}.
-          </p>
-        </div>
-      ) : (
-        <form onSubmit={handleSubmit} className="mt-6 space-y-4 rounded-2xl border border-emerald-950/10 bg-white p-6">
-          <div>
-            <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-stone-500">Email *</label>
-            <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className="w-full rounded-xl border border-stone-200 px-3 py-2 text-sm outline-none focus:border-emerald-700" />
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-stone-500">Phone (for SMS, optional)</label>
-            <input value={phone} onChange={(e) => setPhone(e.target.value)} className="w-full rounded-xl border border-stone-200 px-3 py-2 text-sm outline-none focus:border-emerald-700" />
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-stone-500">City *</label>
-              <input required value={city} onChange={(e) => setCity(e.target.value)} className="w-full rounded-xl border border-stone-200 px-3 py-2 text-sm outline-none focus:border-emerald-700" />
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-stone-500">Radius: {radius} miles</label>
-              <input type="range" min={5} max={100} step={5} value={radius} onChange={(e) => setRadius(Number(e.target.value))} className="w-full accent-emerald-800" />
-            </div>
-          </div>
-          <button type="submit" className="flex items-center gap-2 rounded-full bg-emerald-900 px-5 py-2 text-sm font-semibold text-white hover:bg-emerald-800">
-            <Bell className="h-4 w-4" /> Subscribe to alerts
-          </button>
-        </form>
-      )}
     </div>
   )
 }
