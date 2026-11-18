@@ -1,5 +1,13 @@
 export type Sect = 'Sunni' | 'Shia' | 'Non-denominational'
 
+/** Publication state (V3). Records without a status predate the field and
+ *  are treated as published. Public submissions always start as `pending`
+ *  and only become visible to everyone after an admin approves them. */
+export type ObituaryStatus = 'pending' | 'published' | 'rejected'
+
+/** How a record entered the system. */
+export type SubmissionVia = 'form' | 'photo' | 'admin'
+
 export interface Janazah {
   mosque: string
   address: string
@@ -57,7 +65,21 @@ export interface Obituary {
   verified?: boolean
   /** 'community' = regular obituary · 'scholar' = verified notable passing */
   kind: 'community' | 'scholar'
+  /** Missing = published (pre-V3 records). */
+  status?: ObituaryStatus
+  submittedVia?: SubmissionVia
   createdAt: string
+}
+
+/** Option A hand-off (V3): a self-contained, copyable/downloadable packet a
+ *  submitter sends to an admin (WhatsApp, email, file). The admin imports it
+ *  into the review queue — no backend needed. Shaped so a future hosted
+ *  backend (e.g. Supabase) can accept the same payload unchanged. */
+export interface SubmissionPacket {
+  packetVersion: 1
+  kind: 'al-baqaa-submission'
+  exportedAt: string
+  obituary: ObituaryInput & { status: 'pending' }
 }
 
 export type ObituaryInput = Omit<Obituary, 'id' | 'duaCount' | 'createdAt' | 'kind'> & { kind?: Obituary['kind'] }

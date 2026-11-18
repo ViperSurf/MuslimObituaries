@@ -495,6 +495,23 @@
           "createdAt": {
             "type": "string",
             "format": "date-time"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "published",
+              "rejected"
+            ],
+            "description": "Publication state. Missing = published (pre-V3 records). Public submissions start as pending and are published only after admin review."
+          },
+          "submittedVia": {
+            "type": "string",
+            "enum": [
+              "form",
+              "photo",
+              "admin"
+            ]
           }
         }
       },
@@ -577,6 +594,36 @@
           },
           "notes": {
             "type": "string"
+          }
+        }
+      },
+      "SubmissionPacket": {
+        "type": "object",
+        "required": [
+          "packetVersion",
+          "kind",
+          "obituary"
+        ],
+        "properties": {
+          "packetVersion": {
+            "type": "integer",
+            "const": 1
+          },
+          "kind": {
+            "type": "string",
+            "const": "al-baqaa-submission"
+          },
+          "exportedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "obituary": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ObituaryInput"
+              }
+            ],
+            "description": "Always carries status: pending."
           }
         }
       }

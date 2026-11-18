@@ -6,6 +6,8 @@ import type {
   ObituaryFilters,
   ObituaryInput,
   PlatformTip,
+  SubmissionPacket,
+  SubmissionVia,
   Vendor,
   VendorCategory,
 } from '../types'
@@ -43,6 +45,7 @@ function adminHeaders(): Record<string, string> {
 
 const K = {
   myObituaries: 'albaqaa.v2.myObituaries',
+  pendingSubmissions: 'albaqaa.v3.pendingSubmissions',
   myCondolences: 'albaqaa.v2.myCondolences',
   duaDeltas: 'albaqaa.v2.duaDeltas',
   condolenceDuaDeltas: 'albaqaa.v2.condolenceDuaDeltas',
@@ -120,8 +123,15 @@ function rollSampleJanazah(o: Obituary): Obituary {
   return { ...o, janazah: { ...o.janazah, datetime: local } }
 }
 
-function applyOverlays(db: Database): Obituary[] {
-  if (SERVER_MODE) return db.obituaries.map(rollSampleJanazah)
+export function isPublished(o: Obituary): boolean {
+  return !o.status || o.status === 'published'
+}
+
+function applyOverlays(db: Database, includeUnpublished = false): Obituary[] {
+  if (SERVER_MODE) {
+    const all = db.obituaries.map(rollSampleJanazah)
+    return includeUnpublished ? all : all.filter(isPublished)
+  }
   const deleted = new Set(read<string[]>(K.deletedIds, []))
   const overrides = read<Record<string, boolean>>(K.verifiedOverrides, {})
   const deltas = read<Record<string, number>>(K.duaDeltas, {})
@@ -134,7 +144,14 @@ function applyOverlays(db: Database): Obituary[] {
       duaCount: o.duaCount + (deltas[o.id] ?? 0),
     }))
   const mineVisible = mine.filter((o) => !deleted.has(o.id))
-  return [...mineVisible, ...canonical].map(rollSampleJanazah)
+  const all = [...mineVisible, ...canonical].map(rollSampleJanazah)
+  return includeUnpublished ? all : all.filter(isPublished)
+}
+
+/** Admin-only: every record regardless of publication status. */
+export async function adminListObituaries(): Promise<Obituary[]> {
+  const db = await loadDatabase()
+  return applyOverlays(db, true).sort((a, b) => +new Date(b.dateOfPassing) - +new Date(a.dateOfPassing))
 }
 
 function mergedCondolences(db: Database): Condolence[] {
@@ -216,6 +233,7 @@ export async function createObituary(input: ObituaryInput): Promise<Obituary> {
     ...input,
     id: uid('obit'),
     kind: input.kind ?? 'community',
+    status: 'published',
     duaCount: 1,
     createdAt: new Date().toISOString(),
   }
@@ -223,6 +241,81 @@ export async function createObituary(input: ObituaryInput): Promise<Obituary> {
   mine.unshift(obituary)
   write(K.myObituaries, mine)
   return obituary
+}
+
+/* ---------------- V3: pending queue + Option A packets ---------------- */
+
+/** Public path: a submission NEVER goes live directly. It is stored as
+ *  pending on this device and turned into a packet the submitter sends to
+ *  an admin, who reviews and publishes it (Option A — no backend). */
+export function createPendingSubmission(input: ObituaryInput, via: SubmissionVia): Obituary {
+  const obituary: Obituary = {
+    ...input,
+    id: uid('obit'),
+    kind: input.kind ?? 'community',
+    status: 'pending',
+    submittedVia: via,
+    duaCount: 0,
+    createdAt: new Date().toISOString(),
+  }
+  const all = read<Obituary[]>(K.pendingSubmissions, [])
+  all.unshift(obituary)
+  write(K.pendingSubmissions, all)
+  return obituary
+}
+
+export function listPendingSubmissions(): Obituary[] {
+  return read<Obituary[]>(K.pendingSubmissions, [])
+}
+
+export function buildSubmissionPacket(o: Obituary): SubmissionPacket {
+  const { id: _id, duaCount: _d, createdAt: _c, kind, ...rest } = o
+  void _id; void _d; void _c
+  return {
+    packetVersion: 1,
+    kind: 'al-baqaa-submission',
+    exportedAt: new Date().toISOString(),
+    obituary: { ...rest, kind: kind ?? 'community', status: 'pending' },
+  }
+}
+
+export function packetToText(packet: SubmissionPacket): string {
+  return JSON.stringify(packet)
+}
+
+/** Admin path: import a packet (pasted text or file contents) into this
+ *  device's review queue. Throws a readable error on bad input. */
+export function importSubmissionPacket(text: string): Obituary {
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(text.trim())
+  } catch {
+    throw new Error('That does not look like a submission packet — it is not valid data.')
+  }
+  const p = parsed as Partial<SubmissionPacket>
+  if (p.kind !== 'al-baqaa-submission' || !p.obituary || typeof p.obituary.name !== 'string' || !p.obituary.dateOfPassing) {
+    throw new Error('That file/text is not an Al-Baqaa submission packet, or it is missing the name / date of passing.')
+  }
+  return createPendingSubmission(p.obituary as ObituaryInput, (p.obituary as ObituaryInput).submittedVia ?? 'form')
+}
+
+/** Admin approves a queued submission: it becomes a published listing on
+ *  this device and is included in the next exported database.json. */
+export async function approvePendingSubmission(id: string): Promise<Obituary | null> {
+  const all = read<Obituary[]>(K.pendingSubmissions, [])
+  const found = all.find((o) => o.id === id)
+  if (!found) return null
+  write(K.pendingSubmissions, all.filter((o) => o.id !== id))
+  const published: Obituary = { ...found, status: 'published', verified: true, duaCount: Math.max(1, found.duaCount) }
+  const mine = read<Obituary[]>(K.myObituaries, [])
+  mine.unshift(published)
+  write(K.myObituaries, mine)
+  return published
+}
+
+export function rejectPendingSubmission(id: string): void {
+  const all = read<Obituary[]>(K.pendingSubmissions, [])
+  write(K.pendingSubmissions, all.filter((o) => o.id !== id))
 }
 
 /** POST /api/v1/obituaries/{id}/dua */
@@ -334,6 +427,11 @@ export async function adminDeleteObituary(id: string): Promise<void> {
     dbPromise = null
     return
   }
+  const pending = read<Obituary[]>(K.pendingSubmissions, [])
+  if (pending.some((o) => o.id === id)) {
+    write(K.pendingSubmissions, pending.filter((o) => o.id !== id))
+    return
+  }
   const mine = read<Obituary[]>(K.myObituaries, [])
   if (mine.some((o) => o.id === id)) {
     write(K.myObituaries, mine.filter((o) => o.id !== id))
@@ -391,6 +489,7 @@ export async function adminStats(): Promise<{
   subscriptions: number
   tipsTotal: number
   mySubmissions: number
+  pending: number
 }> {
   if (SERVER_MODE) {
     const s = await apiFetch<{
@@ -400,7 +499,7 @@ export async function adminStats(): Promise<{
       subscriptions: number
       tipsTotal: number
     }>('/api/v1/admin/stats', { headers: adminHeaders() })
-    return { ...s, mySubmissions: 0 }
+    return { ...s, mySubmissions: 0, pending: listPendingSubmissions().length }
   }
   const db = await loadDatabase()
   const tips = read<PlatformTip[]>(K.tips, [])
@@ -411,5 +510,6 @@ export async function adminStats(): Promise<{
     subscriptions: read<AlertSubscription[]>(K.subscriptions, []).length,
     tipsTotal: tips.reduce((sum, tip) => sum + tip.amount, 0),
     mySubmissions: read<Obituary[]>(K.myObituaries, []).length,
+    pending: listPendingSubmissions().length,
   }
 }

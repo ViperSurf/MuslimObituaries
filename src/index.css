@@ -9,7 +9,7 @@
   --surface: #ffffff;
   --surface2: #f3efe3;
   --ink: #1c2420;
-  --muted: #68716a;
+  --muted: #4d5850;
   --header-bg: #052e22;
   --header-ink: #ecfdf5;
   --hero-bg: linear-gradient(160deg, #064e3b 0%, #052e22 70%);
@@ -75,3 +75,44 @@ body {
 }
 .th-input::placeholder { color: var(--muted); }
 select.th-input option { background: var(--surface); color: var(--ink); }
+
+/* ---- V3 accessibility ---- */
+/* Large-text mode (A+ toggle): scales every rem-based size up a step. */
+html[data-textsize='large'] { font-size: 18.5px; }
+
+/* Visible keyboard focus everywhere. */
+:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Skip link: hidden until focused. */
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 50;
+  background: var(--primary);
+  color: var(--primary-ink);
+  padding: 0.6rem 1rem;
+  font-weight: 600;
+}
+.skip-link:focus { left: 0.5rem; top: 0.5rem; }
+
+/* Respect reduced motion: freeze the prayer-guide animation and all
+   transitions/animations. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Printing (the prayer guide's Print button): content only. */
+@media print {
+  header, footer, .skip-link { display: none !important; }
+  body { background: #fff; }
+}

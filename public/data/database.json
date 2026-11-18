@@ -49,7 +49,8 @@
       "duaCount": 12,
       "verified": false,
       "kind": "community",
-      "createdAt": "2026-11-11T17:00:00Z"
+      "createdAt": "2026-11-11T17:00:00Z",
+      "status": "published"
     },
     {
       "id": "sample-2",
@@ -65,7 +66,8 @@
       "duaCount": 3,
       "verified": false,
       "kind": "community",
-      "createdAt": "2026-11-11T17:00:00Z"
+      "createdAt": "2026-11-11T17:00:00Z",
+      "status": "published"
     },
     {
       "id": "sample-3",
@@ -81,7 +83,8 @@
       "duaCount": 7,
       "verified": false,
       "kind": "community",
-      "createdAt": "2026-11-11T17:00:00Z"
+      "createdAt": "2026-11-11T17:00:00Z",
+      "status": "published"
     },
     {
       "id": "scholar-1",
@@ -99,7 +102,8 @@
       "duaCount": 0,
       "verified": true,
       "kind": "scholar",
-      "createdAt": "1999-05-13T00:00:00Z"
+      "createdAt": "1999-05-13T00:00:00Z",
+      "status": "published"
     }
   ],
   "condolences": [

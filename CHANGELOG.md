@@ -1,5 +1,45 @@
 # Changelog — Al-Baqaa (Muslim Obituaries)
 
+## V3.0 — 2026-11-16 · Grief-first: prayer guide, photo intake, review queue
+
+- **How to Pray Janazah** (`#/pray`): animated step-by-step guide (SVG
+  figure, play/pause, keyboard, all-steps and print views) in all six
+  site languages, with a school-of-thought selector (Hanafi, Shafi'i,
+  Maliki, Hanbali) that adjusts the differing points, and a standing
+  "follow the imam" note. Linked from every obituary page.
+- **Separate public and admin UIs:** the public site no longer links the
+  admin panel, the changelog, the database file or the API anywhere.
+  The admin workspace (`#/admin`, direct address only — see README)
+  has its own shell and four sections: Review Queue, Photo Intake,
+  Listings, Publish.
+- **Changelog is this file only.** The in-app changelog page, its route
+  and its links are removed.
+- **Photo-first submission:** a photo of a notice/flyer is read by OCR
+  on the reviewer's own device (tesseract.js, loaded on demand; the
+  image is never uploaded) and drafted into fields — name, dates,
+  Janazah time, mosque, cemetery — with anything unread left blank for
+  a human, never guessed. Admins publish from the photo in Photo
+  Intake; the public submit form offers the same pre-fill.
+- **Pending review + Option A publishing:** public submissions are
+  `pending`, never live directly. The submitter receives a submission
+  packet (WhatsApp / email / file / copy) to send to an admin; the
+  admin imports it into the Review Queue, approves it, exports the
+  updated `database.json` and publishes it by committing the file.
+  Records gained a `status` field (pending/published/rejected) in the
+  data model and the OpenAPI contract, shaped for a future hosted
+  backend.
+- **Submit form cut to five essentials** with everything else optional,
+  on-device draft autosave, and portrait upload (downscaled on device).
+- **Announcement builder:** every obituary can copy a ready-made
+  WhatsApp announcement and download a generated announcement image.
+- **"When a loved one passes"** (`#/checklist`): a calm first-24-hours
+  checklist in all six languages.
+- **Accessibility:** skip-to-content link, visible keyboard focus,
+  darker muted text (WCAG AA), A+ large-text toggle, reduced-motion
+  support, announced form errors, ≥44px targets, sticky mobile Janazah
+  bar (time · directions · calendar) on upcoming obituaries, and a
+  per-obituary "report an error / request removal" link.
+
 ## V2.0.2 — 2026-11-11 · Server-ready data layer
 - Scholars collection narrowed to one verified passing: Sheikh Abdul
   Aziz ibn Baz (d. 13 May 1999).

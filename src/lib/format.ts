@@ -91,6 +91,29 @@ export function downloadIcs(obituary: Obituary, janazah: Janazah): void {
   URL.revokeObjectURL(url)
 }
 
+/** The WhatsApp announcement text families already copy into groups:
+ *  name, dua, Janazah time/place, directions and the page link. */
+export function announcementText(o: Obituary): string {
+  const lines = [
+    'إِنَّا لِلَّهِ وَإِنَّا إِلَيْهِ رَاجِعُونَ',
+    `Inna lillahi wa inna ilayhi raji'un`,
+    '',
+    `Janazah & obituary for ${o.name}${o.arabicName ? ` (${o.arabicName})` : ''}`,
+    `Passed: ${formatDate(o.dateOfPassing)} — ${locationLine(o)}`,
+  ]
+  if (o.janazah) {
+    lines.push(
+      '',
+      `Janazah prayer: ${formatDateTime(o.janazah.datetime)}${o.janazah.afterPrayer ? ` (${o.janazah.afterPrayer})` : ''}`,
+      `${o.janazah.mosque}${o.janazah.address ? ` — ${o.janazah.address}` : ''}`,
+      `Directions: ${mapsUrl(`${o.janazah.mosque} ${o.janazah.address}`)}`,
+    )
+    if (o.janazah.cemetery) lines.push(`Burial: ${o.janazah.cemetery}${o.janazah.burialTime ? ` — ${o.janazah.burialTime}` : ''}`)
+  }
+  lines.push('', `Details & duas: ${obituaryShareUrl(o.id)}`, 'Please keep them in your duas. 🤲')
+  return lines.join('\n')
+}
+
 /** Share text/link helpers: Web Share API where available, else clipboard. */
 export function obituaryShareUrl(id: string): string {
   return `${window.location.origin}${window.location.pathname}#/obituary/${id}`

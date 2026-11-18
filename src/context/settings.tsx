@@ -4,11 +4,15 @@ import { LANGS, translate, type Lang, type TKey } from '../i18n'
 export type Theme = 'emerald' | 'white' | 'black'
 export const THEMES: Theme[] = ['emerald', 'white', 'black']
 
+export type TextSize = 'normal' | 'large'
+
 interface Settings {
   lang: Lang
   setLang: (l: Lang) => void
   theme: Theme
   setTheme: (t: Theme) => void
+  textSize: TextSize
+  toggleTextSize: () => void
   t: (key: TKey) => string
   dir: 'ltr' | 'rtl'
 }
@@ -26,18 +30,26 @@ function stored<T extends string>(key: string, fallback: T): T {
 export function SettingsProvider({ children }: { children: ReactNode }) {
   const [lang, setLangState] = useState<Lang>(() => stored('albaqaa.lang', 'en' as Lang))
   const [theme, setThemeState] = useState<Theme>(() => stored('albaqaa.theme', 'emerald' as Theme))
+  const [textSize, setTextSizeState] = useState<TextSize>(() => stored('albaqaa.textSize', 'normal' as TextSize))
 
   const dir = useMemo(() => LANGS.find((l) => l.code === lang)?.dir ?? 'ltr', [lang])
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme
+    document.documentElement.dataset.textsize = textSize
     document.documentElement.lang = lang
     document.documentElement.dir = dir
-  }, [theme, lang, dir])
+  }, [theme, lang, dir, textSize])
 
   const value: Settings = {
     lang,
     theme,
+    textSize,
+    toggleTextSize: () => {
+      const next: TextSize = textSize === 'normal' ? 'large' : 'normal'
+      setTextSizeState(next)
+      try { localStorage.setItem('albaqaa.textSize', next) } catch { /* ignore */ }
+    },
     dir,
     setLang: (l) => {
       setLangState(l)

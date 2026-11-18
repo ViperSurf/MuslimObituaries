@@ -3,6 +3,7 @@ import type { Condolence, Obituary } from '../types'
 import * as api from '../services/api'
 import { DUA_TEMPLATES } from '../data/templates'
 import {
+  announcementText,
   downloadIcs,
   effectiveAge,
   formatDate,
@@ -13,6 +14,7 @@ import {
   shareObituary,
 } from '../lib/format'
 import { useSettings } from '../context/settings'
+import { downloadAnnouncementCard } from '../lib/announcement'
 
 interface Props {
   obituary: Obituary
@@ -30,6 +32,13 @@ export default function DetailView({ obituary, onBack, onDua, duaGiven }: Props)
   const [arabicDua, setArabicDua] = useState('')
   const [wallDuas, setWallDuas] = useState<Set<string>>(new Set())
   const [shareState, setShareState] = useState<'idle' | 'done'>('idle')
+  const [announceState, setAnnounceState] = useState<'idle' | 'done'>('idle')
+
+  const copyAnnouncement = async () => {
+    await navigator.clipboard.writeText(announcementText(o))
+    setAnnounceState('done')
+    setTimeout(() => setAnnounceState('idle'), 2500)
+  }
   const o = obituary
   const age = effectiveAge(o)
 
@@ -75,7 +84,7 @@ export default function DetailView({ obituary, onBack, onDua, duaGiven }: Props)
     new Date() <= new Date(`${o.condolenceWindow.endDate}T23:59:59`)
 
   return (
-    <div className="mx-auto max-w-3xl">
+    <div className="mx-auto max-w-3xl pb-24 sm:pb-0">
       <div className="mb-4 flex items-center justify-between">
         <button onClick={onBack} className="text-sm font-semibold underline">
           ← {t('nav_obituaries')}
@@ -189,6 +198,28 @@ export default function DetailView({ obituary, onBack, onDua, duaGiven }: Props)
                 🪦 {t('cemetery_label')} — {t('directions')}
               </a>
             )}
+          </div>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button
+              onClick={copyAnnouncement}
+              className="rounded-xl bg-emerald-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-800"
+            >
+              {announceState === 'done' ? '✓ Copied' : '📋 Copy WhatsApp announcement'}
+            </button>
+            <button
+              onClick={() => downloadAnnouncementCard(o)}
+              className="th-surface2 th-border rounded-xl border px-4 py-2 text-sm font-semibold transition hover:opacity-80"
+            >
+              🖼️ Announcement image
+            </button>
+            <button
+              onClick={() => {
+                window.location.hash = '/pray'
+              }}
+              className="th-surface2 th-border rounded-xl border px-4 py-2 text-sm font-semibold transition hover:opacity-80"
+            >
+              🕌 {t('pray_link_detail')}
+            </button>
           </div>
         </section>
       )}
@@ -332,6 +363,36 @@ export default function DetailView({ obituary, onBack, onDua, duaGiven }: Props)
           ))}
         </div>
       </section>
+
+      <p className="mt-6 text-center text-sm">
+        <a
+          className="th-muted underline"
+          href={`https://github.com/ViperSurf/MuslimObituaries/issues/new?title=${encodeURIComponent(`Correction / removal: ${o.name}`)}&body=${encodeURIComponent(`Obituary: ${o.name} (${o.id})\n\nWhat needs correcting, or why should this listing be removed?\n`)}`}
+          target="_blank"
+          rel="noreferrer"
+        >
+          {t('report_error')}
+        </a>
+      </p>
+
+      {o.janazah && new Date(o.janazah.datetime) >= new Date() && (
+        <div className="th-header fixed inset-x-0 bottom-0 z-20 flex items-center gap-2 px-3 py-2.5 shadow-lg sm:hidden">
+          <span className="min-w-0 flex-1 truncate text-sm font-semibold">
+            🕌 {new Date(o.janazah.datetime).toLocaleString([], { weekday: 'short', hour: 'numeric', minute: '2-digit' })} · {o.janazah.mosque}
+          </span>
+          <a
+            href={mapsUrl(`${o.janazah.mosque} ${o.janazah.address}`)}
+            target="_blank"
+            rel="noreferrer"
+            className="shrink-0 rounded-lg bg-amber-500 px-3 py-1.5 text-sm font-bold text-emerald-950"
+          >
+            🧭 {t('directions')}
+          </a>
+          <button onClick={() => downloadIcs(o, o.janazah!)} className="shrink-0 rounded-lg bg-white/15 px-3 py-1.5 text-sm font-bold">
+            📅
+          </button>
+        </div>
+      )}
     </div>
   )
 }
