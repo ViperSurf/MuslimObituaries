@@ -1,5 +1,20 @@
 # Changelog — Al-Baqaa (Muslim Obituaries)
 
+## V3.0.1 — 2026-11-17 · Checklist correction: debts come early
+
+- **"When a loved one passes" checklist (`#/checklist`):** settling the
+  deceased's debts and obligations is now its own early step — before
+  the Janazah prayer step (before the funeral prayer if possible; some
+  scholars say before the washing, at the latest before the burial),
+  including the bridge of an heir or another person taking
+  responsibility for / guaranteeing the debt when the estate is not
+  immediately available. The closing "Afterwards" item no longer lists
+  debts; it now covers the wasiyyah and estate distribution, which come
+  after debts. Corrected in all six languages, per the source the owner
+  supplied (ash-Shafi'i, Ahmad, at-Tirmidhi from Abu Hurayrah). The
+  ordering rule is recorded in a comment at the top of
+  `src/data/checklist.ts`.
+
 ## V3.0 — 2026-11-16 · Grief-first: prayer guide, photo intake, review queue
 
 - **How to Pray Janazah** (`#/pray`): animated step-by-step guide (SVG
