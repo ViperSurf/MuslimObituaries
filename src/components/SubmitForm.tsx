@@ -92,7 +92,7 @@ export default function SubmitForm() {
     try {
       setPhotoUrl(await fileToPortraitDataUrl(file))
     } catch {
-      setError('That portrait could not be read. You can continue without one.')
+      setError(t('sf_err_portrait'))
     }
   }
 
@@ -101,7 +101,7 @@ export default function SubmitForm() {
   const submit = async () => {
     setError('')
     if (!essentialsValid) {
-      setError('Please add the name, date of passing, city, and a line or two about them. Everything else is optional.')
+      setError(t('sf_err_required'))
       return
     }
     const input: ObituaryInput = {
@@ -161,15 +161,15 @@ export default function SubmitForm() {
     const packet = api.buildSubmissionPacket(packetObit)
     const packetText = api.packetToText(packet)
     const summary = [
-      `Assalamu alaikum — a new obituary submission for Al-Baqaa, for review and publishing:`,
+      t('sf_msg_intro'),
       ``,
-      `Name: ${saved.name}`,
-      `Passed: ${saved.dateOfPassing}`,
-      `City: ${saved.city}${saved.state ? `, ${saved.state}` : ''}`,
-      saved.janazah ? `Janazah: ${saved.janazah.mosque} — ${new Date(saved.janazah.datetime).toLocaleString()}` : '',
-      saved.photoUrl?.startsWith('data:') ? `(A portrait photo was added on the submission device and can be sent separately.)` : '',
+      `${t('sf_msg_name')} ${saved.name}`,
+      `${t('sf_msg_passed')} ${saved.dateOfPassing}`,
+      `${t('sf_msg_city')} ${saved.city}${saved.state ? `, ${saved.state}` : ''}`,
+      saved.janazah ? `${t('sf_msg_janazah')} ${saved.janazah.mosque} — ${new Date(saved.janazah.datetime).toLocaleString()}` : '',
+      saved.photoUrl?.startsWith('data:') ? t('sf_msg_photo') : '',
       ``,
-      `Submission data — paste this into Al-Baqaa Admin → Review Queue → Import:`,
+      t('sf_msg_instructions'),
       packetText,
     ]
       .filter((l) => l !== '')
@@ -186,14 +186,12 @@ export default function SubmitForm() {
     return (
       <div className="mx-auto max-w-2xl">
         <div className="th-surface rounded-3xl p-6 shadow-sm sm:p-8">
-          <h2 className="font-display text-3xl font-bold">🤲 Received — may Allah have mercy on {saved.name}</h2>
+          <h2 className="font-display text-3xl font-bold">{t('sf_received')} {saved.name}</h2>
           <p className="mt-3 leading-relaxed">
-            The submission is saved as <strong>pending review</strong>. To protect families from mistakes, an admin checks every
-            obituary before it appears publicly.
+            {t('sf_pending_a')} <strong>{t('sf_pending_b')}</strong>{t('sf_pending_c')}
           </p>
           <p className="mt-2 leading-relaxed">
-            <strong>One last step:</strong> send the submission to your mosque / Al-Baqaa admin using any of these — they can import it
-            in one click and publish it for everyone:
+            <strong>{t('sf_last_a')}</strong>{t('sf_last_b')}
           </p>
           <div className="mt-5 flex flex-wrap gap-2">
             <a
@@ -202,16 +200,16 @@ export default function SubmitForm() {
               rel="noreferrer"
               className="rounded-xl bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-800"
             >
-              Send by WhatsApp
+              {t('sf_send_whatsapp')}
             </a>
             <a
-              href={`mailto:?subject=${encodeURIComponent(`Al-Baqaa obituary submission — ${saved.name}`)}&body=${encodeURIComponent(summary)}`}
+              href={`mailto:?subject=${encodeURIComponent(`${t('sf_msg_subject')} ${saved.name}`)}&body=${encodeURIComponent(summary)}`}
               className="th-primary rounded-xl px-4 py-2.5 text-sm font-semibold transition hover:opacity-90"
             >
-              Send by email
+              {t('sf_send_email')}
             </a>
             <button onClick={downloadPacket} className="th-surface2 th-border rounded-xl border px-4 py-2.5 text-sm font-semibold">
-              ⬇️ Download submission file
+              {t('sf_download')}
             </button>
             <button
               onClick={async () => {
@@ -221,12 +219,11 @@ export default function SubmitForm() {
               }}
               className="th-surface2 th-border rounded-xl border px-4 py-2.5 text-sm font-semibold"
             >
-              {copied ? '✓ Copied' : 'Copy submission data'}
+              {copied ? t('sf_copied') : t('sf_copy')}
             </button>
           </div>
           <p className="th-muted mt-4 text-sm leading-relaxed">
-            If you are the admin, open the Admin panel (direct address: <code>#/admin</code>), go to Review Queue, and import this
-            submission to publish it.
+            {t('sf_admin_a')}<code>#/admin</code>{t('sf_admin_b')}
           </p>
         </div>
       </div>
@@ -237,7 +234,7 @@ export default function SubmitForm() {
     <div className="mx-auto max-w-2xl">
       <h2 className="font-display text-3xl font-bold">{t('submit_title')}</h2>
       <p className="th-muted mt-2">{t('submit_sub')}</p>
-      <p className="th-muted mt-1 text-sm">Your work is saved automatically on this device as you type.</p>
+      <p className="th-muted mt-1 text-sm">{t('sf_autosave')}</p>
 
       <div className="mt-5">
         <PhotoIntake onFields={applyNotice} />
@@ -250,7 +247,7 @@ export default function SubmitForm() {
           void submit()
         }}
       >
-        <h3 className="font-bold">The essentials</h3>
+        <h3 className="font-bold">{t('sf_essentials')}</h3>
         <label className={labelCls}>
           {t('f_name')} *
           <input value={name} onChange={(e) => setName(e.target.value)} required aria-required="true" className={inputCls} />
@@ -281,13 +278,13 @@ export default function SubmitForm() {
             required
             aria-required="true"
             rows={4}
-            placeholder="A line or two is enough — the family or an admin can add more later."
+            placeholder={t('sf_bio_ph')}
             className={inputCls}
           />
         </label>
 
         <details className="th-surface2 th-border rounded-2xl border p-4">
-          <summary className="cursor-pointer font-semibold">Add more if you wish (all optional)</summary>
+          <summary className="cursor-pointer font-semibold">{t('sf_more')}</summary>
           <div className="mt-3 grid gap-3">
             <div className="grid gap-3 sm:grid-cols-2">
               <label className={labelCls}>
@@ -305,14 +302,14 @@ export default function SubmitForm() {
               <label className={labelCls}>
                 {t('f_sect')}
                 <select value={sect} onChange={(e) => setSect(e.target.value as Sect)} className={inputCls}>
-                  <option>Sunni</option>
-                  <option>Shia</option>
-                  <option>Non-denominational</option>
+                  <option value="Sunni">{t('sf_sect_sunni')}</option>
+                  <option value="Shia">{t('sf_sect_shia')}</option>
+                  <option value="Non-denominational">{t('sf_sect_nondenom')}</option>
                 </select>
               </label>
             </div>
             <label className={labelCls}>
-              Portrait photo (optional)
+              {t('sf_portrait')}
               <input
                 type="file"
                 accept="image/*"
@@ -324,13 +321,13 @@ export default function SubmitForm() {
                 className={inputCls}
               />
             </label>
-            {photoUrl && <img src={photoUrl} alt="Portrait preview" className="h-28 w-28 rounded-2xl object-cover" />}
+            {photoUrl && <img src={photoUrl} alt={t('sf_portrait_alt')} className="h-28 w-28 rounded-2xl object-cover" />}
             <label className={labelCls}>
               {t('f_family')}
               <input value={family} onChange={(e) => setFamily(e.target.value)} className={inputCls} />
             </label>
             <label className={labelCls}>
-              Family members (one per line)
+              {t('sf_family_members')}
               <textarea value={familyMembers} onChange={(e) => setFamilyMembers(e.target.value)} rows={3} className={inputCls} />
             </label>
             <div className="grid gap-3 sm:grid-cols-2">
@@ -340,7 +337,7 @@ export default function SubmitForm() {
               </label>
               <label className={labelCls}>
                 {t('f_after')}
-                <input value={afterPrayer} onChange={(e) => setAfterPrayer(e.target.value)} placeholder="After Dhuhr" className={inputCls} />
+                <input value={afterPrayer} onChange={(e) => setAfterPrayer(e.target.value)} placeholder={t('sf_after_ph')} className={inputCls} />
               </label>
               <label className={labelCls}>
                 {t('f_cemetery')}
@@ -352,7 +349,7 @@ export default function SubmitForm() {
               </label>
               <label className={labelCls}>
                 {t('burial_label')}
-                <input value={burialTime} onChange={(e) => setBurialTime(e.target.value)} placeholder="Immediately after Janazah" className={inputCls} />
+                <input value={burialTime} onChange={(e) => setBurialTime(e.target.value)} placeholder={t('sf_burial_ph')} className={inputCls} />
               </label>
             </div>
             <label className={labelCls}>
@@ -369,7 +366,7 @@ export default function SubmitForm() {
                 <input value={charityOrg} onChange={(e) => setCharityOrg(e.target.value)} className={inputCls} />
               </label>
               <label className={labelCls}>
-                Donation URL
+                {t('sf_donation_url')}
                 <input value={charityUrl} onChange={(e) => setCharityUrl(e.target.value)} placeholder="https://…" className={inputCls} />
               </label>
             </div>
@@ -382,11 +379,10 @@ export default function SubmitForm() {
           </p>
         )}
         <button type="submit" className="th-primary rounded-xl px-5 py-3 font-semibold transition hover:opacity-90">
-          Submit for review
+          {t('sf_submit_btn')}
         </button>
         <p className="th-muted text-sm leading-relaxed">
-          An admin reviews every submission before it appears publicly. After submitting, you will get a submission file/message to
-          send to your admin — that is how it reaches the shared site.
+          {t('sf_review_note')}
         </p>
       </form>
     </div>

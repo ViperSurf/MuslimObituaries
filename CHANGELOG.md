@@ -1,5 +1,19 @@
 # Changelog — Al-Baqaa (Muslim Obituaries)
 
+## V3.0.2 — 2026-11-17 · Submit section fully translated
+
+- **The Submit an obituary section (`#/submit`) is now fully translated
+  in all six languages.** Root cause: every form field label existed
+  only in the English dictionary (all other languages fell back to
+  English), and the V3 form/photo-intake/success-panel copy was
+  hard-coded English. All field labels, the photo-intake panel, the
+  essentials/optional sections, error messages, the success panel, and
+  even the WhatsApp/email submission message now use the language
+  dictionaries — verified: every language now has all 167 keys, zero
+  fallbacks. The stale pre-V3 `submit_sub` translations (which claimed
+  submissions "appear immediately on this device") were also corrected
+  to describe the review flow.
+
 ## V3.0.1 — 2026-11-17 · Checklist correction: debts come early
 
 - **"When a loved one passes" checklist (`#/checklist`):** settling the

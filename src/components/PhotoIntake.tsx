@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
 import { parseNoticeText, type NoticeFields } from '../lib/notice'
+import { useSettings } from '../context/settings'
 
 interface Props {
   /** Called with the parsed draft fields once OCR finishes. */
@@ -15,6 +16,7 @@ interface Props {
  * anywhere — only the text the reviewer confirms becomes data.
  */
 export default function PhotoIntake({ onFields, heading, sub }: Props) {
+  const { t } = useSettings()
   const [busy, setBusy] = useState(false)
   const [progress, setProgress] = useState(0)
   const [preview, setPreview] = useState('')
@@ -40,21 +42,21 @@ export default function PhotoIntake({ onFields, heading, sub }: Props) {
       setRaw(text)
       const fields = parseNoticeText(text)
       const labels: [keyof NoticeFields, string][] = [
-        ['name', 'Name'],
-        ['dateOfPassing', 'Date of passing'],
-        ['dateOfBirth', 'Date of birth'],
-        ['city', 'City'],
-        ['mosque', 'Mosque / venue'],
-        ['datetime', 'Janazah time'],
-        ['afterPrayer', 'Prayer timing'],
-        ['cemetery', 'Cemetery'],
-        ['address', 'Address'],
+        ['name', t('pi_f_name')],
+        ['dateOfPassing', t('pi_f_dod')],
+        ['dateOfBirth', t('pi_f_dob')],
+        ['city', t('pi_f_city')],
+        ['mosque', t('pi_f_mosque')],
+        ['datetime', t('pi_f_datetime')],
+        ['afterPrayer', t('pi_f_after')],
+        ['cemetery', t('pi_f_cemetery')],
+        ['address', t('pi_f_address')],
       ]
       setFound(labels.filter(([k]) => fields[k]).map(([, l]) => l))
       setMissing(labels.filter(([k]) => !fields[k]).map(([, l]) => l))
       onFields(fields, text)
     } catch {
-      setError('The photo could not be read on this device. You can still fill the details in by hand below.')
+      setError(t('pi_err'))
     } finally {
       setBusy(false)
     }
@@ -62,10 +64,10 @@ export default function PhotoIntake({ onFields, heading, sub }: Props) {
 
   return (
     <div className="th-surface2 th-border rounded-2xl border p-4">
-      <h3 className="font-bold">📷 {heading ?? 'Start with a photo of the notice'}</h3>
+      <h3 className="font-bold">📷 {heading ?? t('pi_heading')}</h3>
       <p className="th-muted mt-1 text-sm leading-relaxed">
         {sub ??
-          'A funeral-home notice, mosque announcement or flyer photo is enough. The photo is read on this device only — it is never uploaded — and you check every detail before anything is saved.'}
+          t('pi_sub')}
       </p>
       <div className="mt-3 flex flex-wrap items-center gap-3">
         <button
@@ -74,7 +76,7 @@ export default function PhotoIntake({ onFields, heading, sub }: Props) {
           disabled={busy}
           className="th-primary rounded-xl px-4 py-2 text-sm font-semibold transition hover:opacity-90 disabled:opacity-50"
         >
-          {busy ? `Reading photo… ${progress}%` : 'Choose a photo'}
+          {busy ? `${t('pi_reading')} ${progress}%` : t('pi_choose')}
         </button>
         <input
           ref={fileRef}
@@ -87,7 +89,7 @@ export default function PhotoIntake({ onFields, heading, sub }: Props) {
             e.target.value = ''
           }}
         />
-        {preview && <img src={preview} alt="Notice you selected" className="h-20 w-20 rounded-xl object-cover" />}
+        {preview && <img src={preview} alt={t('pi_alt')} className="h-20 w-20 rounded-xl object-cover" />}
       </div>
       {busy && (
         <div className="th-surface mt-3 h-2 overflow-hidden rounded-full" role="progressbar" aria-valuenow={progress} aria-valuemin={0} aria-valuemax={100}>
@@ -102,22 +104,21 @@ export default function PhotoIntake({ onFields, heading, sub }: Props) {
       {found.length > 0 && (
         <div className="mt-3 text-sm leading-relaxed">
           <p>
-            <strong>Found:</strong> {found.join(' · ')}
+            <strong>{t('pi_found')}</strong> {found.join(' · ')}
           </p>
           {missing.length > 0 && (
             <p className="th-muted">
-              <strong>Please add by hand:</strong> {missing.join(' · ')} — the reader never guesses.
+              <strong>{t('pi_add')}</strong> {missing.join(' · ')} {t('pi_never')}
             </p>
           )}
           <details className="mt-2">
-            <summary className="cursor-pointer font-medium">See the text that was read</summary>
+            <summary className="cursor-pointer font-medium">{t('pi_see')}</summary>
             <pre className="th-surface mt-2 max-h-48 overflow-auto rounded-xl p-3 text-xs whitespace-pre-wrap">{raw}</pre>
           </details>
         </div>
       )}
       <p className="th-muted mt-3 text-xs leading-relaxed">
-        Printed notices read best. Handwriting and decorative Arabic calligraphy may need more hand-checking — a person always reviews
-        before publishing.
+        {t('pi_note')}
       </p>
     </div>
   )
